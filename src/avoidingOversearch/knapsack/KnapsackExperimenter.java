@@ -1,9 +1,7 @@
 package avoidingOversearch.knapsack;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,23 +11,23 @@ import java.util.Set;
 
 import org.aeonbits.owner.ConfigCache;
 
-import de.upb.crc901.mlplan.multiclass.DefaultPreorder;
-import de.upb.crc901.mlplan.multiclass.MLPlan;
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
 import jaicore.experiments.ExperimentRunner;
 import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
-import jaicore.ml.WekaUtil;
+import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
+import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
+import jaicore.search.algorithms.standard.mcts.IPolicy;
+import jaicore.search.algorithms.standard.mcts.MCTS;
+import jaicore.search.algorithms.standard.mcts.UCBPolicy;
+import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
 import jaicore.search.evaluationproblems.KnapsackProblem;
 import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
 import jaicore.search.structure.core.Node;
-import weka.classifiers.AbstractClassifier;
-import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
-import weka.core.Instances;
 
 public class KnapsackExperimenter {
 
@@ -49,38 +47,71 @@ public class KnapsackExperimenter {
 			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter,
 					IExperimentIntermediateResultProcessor processor) throws Exception {
 
-				/* get experiment setup */
+				// Get experiment setup
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String algorithmName = description.get("algorithm");
 				int seed = Integer.valueOf(description.get("seed"));
 				double problemSize = Double.valueOf(description.get("problem-size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
-				double score = Double.MAX_VALUE;
-				// Calculate experiment score
 				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize);
+				RandomCompletionEvaluator<KnapsackNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(
+					new Random(seed),
+					3,
+					new IPathUnification<KnapsackNode>() {
+						@Override
+						public List<KnapsackNode> getSubsumingKnownPathCompletion(
+								Map<List<KnapsackNode>, List<KnapsackNode>> knownPathCompletions,
+								List<KnapsackNode> path) throws InterruptedException {
+							return null;
+						}
+					},
+					knapsackProblem.getSolutionEvaluator()
+				);
+				
+				// Calculate experiment score
+				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 					case "two-phase":
 						break;
 					case "pareto":
 						break;
 					case "awa-star":
-						AwaStarSearch<KnapsackNode, String, Double> search;
+						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
 						try {
-							search = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), knapsackProblem.getNodeEvaluator(), knapsackProblem.getSolutionEvaluator());
-							List<Node<KnapsackNode, Double>>solution = search.search(timeout);
+							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator, knapsackProblem.getSolutionEvaluator());
+							List<Node<KnapsackNode, Double>>solution = awaStarSearch.search(timeout);
 							List<KnapsackNode> solutionPath = new ArrayList<>();
 							solution.forEach(n -> solutionPath.add(n.getPoint()));
 							score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solutionPath);
 						} catch (Throwable e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 						break;
 					case "r-star":
 						break;
 					case "mcts":
+						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
+						IPathUpdatablePolicy<KnapsackNode, String, Double> ucb = new UCBPolicy<>();
+						
+						MCTS<KnapsackNode, String, Double> mctsSearch = new MCTS<>(
+							knapsackProblem.getGraphGenerator(),
+							ucb,
+							randomPolicy,
+							n-> knapsackProblem.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
+						);
+						long t = System.currentTimeMillis();
+						long end = t + timeout * 1000;
+						List<KnapsackNode> solution = mctsSearch.nextSolution();
+						while (solution != null && System.currentTimeMillis() < end) {
+							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+							if (score > solutionScore ) {
+								score = solutionScore;
+							}
+							solution = mctsSearch.nextSolution();
+						}
 						break;
 				}
+
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
 				processor.processResults(results);

@@ -1,21 +1,14 @@
 package avoidingOversearch.tsp;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.aeonbits.owner.ConfigCache;
 
-import de.upb.crc901.mlplan.multiclass.DefaultPreorder;
-import de.upb.crc901.mlplan.multiclass.MLPlan;
 import jaicore.basic.SQLAdapter;
 import jaicore.basic.sets.SetUtil.Pair;
 import jaicore.experiments.ExperimentDBEntry;
@@ -24,16 +17,17 @@ import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.graph.LabeledGraph;
-import jaicore.ml.WekaUtil;
+import jaicore.search.algorithms.interfaces.IPathUnification;
+import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
+import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
+import jaicore.search.algorithms.standard.mcts.IPolicy;
+import jaicore.search.algorithms.standard.mcts.MCTS;
+import jaicore.search.algorithms.standard.mcts.UCBPolicy;
+import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
 import jaicore.search.evaluationproblems.EnhancedTTSP;
 import jaicore.search.evaluationproblems.EnhancedTTSP.EnhancedTTSPNode;
-import jaicore.search.evaluationproblems.KnapsackProblem;
-import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
 import jaicore.search.structure.core.Node;
-import weka.classifiers.AbstractClassifier;
-import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
-import weka.core.Instances;
 
 public class TSPExperimenter {
 
@@ -53,30 +47,70 @@ public class TSPExperimenter {
 			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter,
 					IExperimentIntermediateResultProcessor processor) throws Exception {
 
-				/* get experiment setup */
+				// Get experiment setup
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String algorithmName = description.get("algorithm");
 				int seed = Integer.valueOf(description.get("seed"));
 				double problemSize = Double.valueOf(description.get("problem-size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
+				EnhancedTTSP tsp = createRandomTSP(problemSize);
+				RandomCompletionEvaluator<EnhancedTTSPNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(
+					new Random(seed),
+					3,
+					new IPathUnification<EnhancedTTSPNode>() {
+						@Override
+						public List<EnhancedTTSPNode> getSubsumingKnownPathCompletion(
+								Map<List<EnhancedTTSPNode>, List<EnhancedTTSPNode>> knownPathCompletions,
+								List<EnhancedTTSPNode> path) throws InterruptedException {
+							return null;
+						}
+					},
+					tsp.getSolutionEvaluator()
+				);
 
 				// Calculate experiment score
-				EnhancedTTSP tsp = createRandomTSP(problemSize);
-				// TODO: Configure search
+				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 					case "two-phase":
 						break;
 					case "pareto":
 						break;
 					case "awa-star":
+						AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
+						try {
+							awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator, tsp.getSolutionEvaluator());
+							List<Node<EnhancedTTSPNode, Double>>solution = awaStarSearch.search(timeout);
+							List<EnhancedTTSPNode> solutionPath = new ArrayList<>();
+							solution.forEach(n -> solutionPath.add(n.getPoint()));
+							score = tsp.getSolutionEvaluator().evaluateSolution(solutionPath);
+						} catch (Throwable e) {
+							e.printStackTrace();
+						}
 						break;
 					case "r-star":
 						break;
 					case "mcts":
+						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
+						IPathUpdatablePolicy<EnhancedTTSPNode, String, Double> ucb = new UCBPolicy<>();
+						
+						MCTS<EnhancedTTSPNode, String, Double> mctsSearch = new MCTS<>(
+							tsp.getGraphGenerator(),
+							ucb,
+							randomPolicy,
+							n-> tsp.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
+						);
+						long t = System.currentTimeMillis();
+						long end = t + timeout * 1000;
+						List<EnhancedTTSPNode> solution = mctsSearch.nextSolution();
+						while (solution != null && System.currentTimeMillis() < end) {
+							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(solution);
+							if (score > solutionScore ) {
+								score = solutionScore;
+							}
+							solution = mctsSearch.nextSolution();
+						}
 						break;
 				}
-				List<EnhancedTTSPNode> solutionPath = null;
-				double score = tsp.getSolutionEvaluator().evaluateSolution(solutionPath);
 				
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
