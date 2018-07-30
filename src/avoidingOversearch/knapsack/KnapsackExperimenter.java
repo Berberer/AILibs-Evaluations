@@ -118,7 +118,7 @@ public class KnapsackExperimenter {
 						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
 						try {
 							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator, knapsackProblem.getSolutionEvaluator());
-							List<Node<KnapsackNode, Double>>awaStarSolution = awaStarSearch.search(timeout);
+							List<Node<KnapsackNode, Double>> awaStarSolution = awaStarSearch.search(timeout);
 							List<KnapsackNode> solutionPath = new ArrayList<>();
 							awaStarSolution.forEach(n -> solutionPath.add(n.getPoint()));
 							score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solutionPath);
@@ -127,7 +127,7 @@ public class KnapsackExperimenter {
 						}
 						break;
 					case "r-star":
-						// TODO: Add pareto search
+						// TODO: Add R* search
 						break;
 					case "mcts":
 						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
