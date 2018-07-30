@@ -20,11 +20,17 @@ import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.core.ORGraphSearch;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
 import jaicore.search.algorithms.standard.mcts.IPolicy;
 import jaicore.search.algorithms.standard.mcts.MCTS;
 import jaicore.search.algorithms.standard.mcts.UCBPolicy;
 import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
+import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
+import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
 import jaicore.search.evaluationproblems.KnapsackProblem;
 import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
 import jaicore.search.structure.core.Node;
@@ -54,17 +60,18 @@ public class KnapsackExperimenter {
 				double problemSize = Double.valueOf(description.get("problem-size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
 				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize);
+				IPathUnification<KnapsackNode> pathUnification = new IPathUnification<KnapsackNode>() {
+					@Override
+					public List<KnapsackNode> getSubsumingKnownPathCompletion(
+							Map<List<KnapsackNode>, List<KnapsackNode>> knownPathCompletions,
+							List<KnapsackNode> path) throws InterruptedException {
+						return null;
+					}
+				};
 				RandomCompletionEvaluator<KnapsackNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(
 					new Random(seed),
 					3,
-					new IPathUnification<KnapsackNode>() {
-						@Override
-						public List<KnapsackNode> getSubsumingKnownPathCompletion(
-								Map<List<KnapsackNode>, List<KnapsackNode>> knownPathCompletions,
-								List<KnapsackNode> path) throws InterruptedException {
-							return null;
-						}
-					},
+					pathUnification,
 					knapsackProblem.getSolutionEvaluator()
 				);
 				
@@ -72,22 +79,55 @@ public class KnapsackExperimenter {
 				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 					case "two-phase":
+						ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
+							knapsackProblem.getGraphGenerator(),
+							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
+						);
+						twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<KnapsackNode, Double>(
+							timeout * 1000, 50, 0.1, 0.1,
+							new BasicClockModelPhaseLengthAdjuster(),
+							(solution1, solution2) -> {
+								double intersectionSize = 0.0d;
+								for (String s : solution1.getPackedObjects()) {
+									if (solution2.getPackedObjects().contains(s)) {
+										intersectionSize++;
+									}
+								}
+								HashSet<String> unionSet = new HashSet<>();
+								unionSet.addAll(solution1.getPackedObjects());
+								unionSet.addAll(solution2.getPackedObjects());
+								double unionSize = (double) unionSet.size();
+								return (unionSize - intersectionSize) / unionSize;
+							},
+							new BasicExplorationCandidateSelector<>(0.25d))
+						);
+						long twoPhaseEnd = System.currentTimeMillis() + timeout * 1000;
+						List<KnapsackNode> twoPhaseSolution = twoPhaseSearch.nextSolution();
+						while (twoPhaseSolution != null && System.currentTimeMillis() < twoPhaseEnd) {
+							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(twoPhaseSolution);
+							if (score > solutionScore ) {
+								score = solutionScore;
+							}
+							twoPhaseSolution = twoPhaseSearch.nextSolution();
+						}
 						break;
 					case "pareto":
+						// TODO: Add pareto search
 						break;
 					case "awa-star":
 						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
 						try {
 							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator, knapsackProblem.getSolutionEvaluator());
-							List<Node<KnapsackNode, Double>>solution = awaStarSearch.search(timeout);
+							List<Node<KnapsackNode, Double>>awaStarSolution = awaStarSearch.search(timeout);
 							List<KnapsackNode> solutionPath = new ArrayList<>();
-							solution.forEach(n -> solutionPath.add(n.getPoint()));
+							awaStarSolution.forEach(n -> solutionPath.add(n.getPoint()));
 							score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solutionPath);
 						} catch (Throwable e) {
 							e.printStackTrace();
 						}
 						break;
 					case "r-star":
+						// TODO: Add pareto search
 						break;
 					case "mcts":
 						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
@@ -99,15 +139,14 @@ public class KnapsackExperimenter {
 							randomPolicy,
 							n-> knapsackProblem.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
 						);
-						long t = System.currentTimeMillis();
-						long end = t + timeout * 1000;
-						List<KnapsackNode> solution = mctsSearch.nextSolution();
-						while (solution != null && System.currentTimeMillis() < end) {
-							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+						long mctsEnd = System.currentTimeMillis() + timeout * 1000;
+						List<KnapsackNode> mctsSolution = mctsSearch.nextSolution();
+						while (mctsSolution != null && System.currentTimeMillis() < mctsEnd) {
+							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(mctsSolution);
 							if (score > solutionScore ) {
 								score = solutionScore;
 							}
-							solution = mctsSearch.nextSolution();
+							mctsSolution = mctsSearch.nextSolution();
 						}
 						break;
 				}
