@@ -88,14 +88,16 @@ public class KnapsackExperimenter {
 							new BasicClockModelPhaseLengthAdjuster(),
 							(solution1, solution2) -> {
 								double intersectionSize = 0.0d;
-								for (String s : solution1.getPackedObjects()) {
-									if (solution2.getPackedObjects().contains(s)) {
+								Set<String> items1 = solution1.get(solution1.size() - 1).getPackedObjects();
+								Set<String> items2 = solution2.get(solution2.size() - 1).getPackedObjects();
+								for (String s : items1) {
+									if (items2.contains(s)) {
 										intersectionSize++;
 									}
 								}
 								HashSet<String> unionSet = new HashSet<>();
-								unionSet.addAll(solution1.getPackedObjects());
-								unionSet.addAll(solution2.getPackedObjects());
+								unionSet.addAll(items1);
+								unionSet.addAll(items2);
 								double unionSize = (double) unionSet.size();
 								return (unionSize - intersectionSize) / unionSize;
 							},
