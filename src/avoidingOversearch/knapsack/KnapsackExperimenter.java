@@ -132,7 +132,6 @@ public class KnapsackExperimenter {
 					case "mcts":
 						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
 						IPathUpdatablePolicy<KnapsackNode, String, Double> ucb = new UCBPolicy<>();
-						
 						MCTS<KnapsackNode, String, Double> mctsSearch = new MCTS<>(
 							knapsackProblem.getGraphGenerator(),
 							ucb,
