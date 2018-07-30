@@ -20,11 +20,17 @@ import jaicore.graph.LabeledGraph;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.core.ORGraphSearch;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
 import jaicore.search.algorithms.standard.mcts.IPolicy;
 import jaicore.search.algorithms.standard.mcts.MCTS;
 import jaicore.search.algorithms.standard.mcts.UCBPolicy;
 import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
+import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
+import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
 import jaicore.search.evaluationproblems.EnhancedTTSP;
 import jaicore.search.evaluationproblems.EnhancedTTSP.EnhancedTTSPNode;
 import jaicore.search.structure.core.Node;
@@ -54,17 +60,18 @@ public class TSPExperimenter {
 				double problemSize = Double.valueOf(description.get("problem-size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
 				EnhancedTTSP tsp = createRandomTSP(problemSize);
+				IPathUnification<EnhancedTTSPNode> pathUnification = new IPathUnification<EnhancedTTSPNode>() {
+					@Override
+					public List<EnhancedTTSPNode> getSubsumingKnownPathCompletion(
+							Map<List<EnhancedTTSPNode>, List<EnhancedTTSPNode>> knownPathCompletions,
+							List<EnhancedTTSPNode> path) throws InterruptedException {
+						return null;
+					}
+				};
 				RandomCompletionEvaluator<EnhancedTTSPNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(
 					new Random(seed),
 					3,
-					new IPathUnification<EnhancedTTSPNode>() {
-						@Override
-						public List<EnhancedTTSPNode> getSubsumingKnownPathCompletion(
-								Map<List<EnhancedTTSPNode>, List<EnhancedTTSPNode>> knownPathCompletions,
-								List<EnhancedTTSPNode> path) throws InterruptedException {
-							return null;
-						}
-					},
+					pathUnification,
 					tsp.getSolutionEvaluator()
 				);
 
@@ -72,42 +79,72 @@ public class TSPExperimenter {
 				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 					case "two-phase":
+						ORGraphSearch<EnhancedTTSPNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
+							tsp.getGraphGenerator(),
+							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>())
+						);
+						twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<EnhancedTTSPNode, Double>(
+							timeout * 1000, 50, 0.1, 0.1,
+							new BasicClockModelPhaseLengthAdjuster(),
+							(solution1, solution2) -> {
+								int minLength = Math.min(solution1.size(), solution2.size());
+								int commonPathLength = 0;
+								for (int i = 0; i < minLength; i++) {
+									if (solution1.get(i).getCurLocation() == solution2.get(i).getCurLocation()) {
+										commonPathLength++;
+									} else {
+										break;
+									}
+								}
+								return ((double)minLength - commonPathLength) / ((double)minLength);
+							},
+							new BasicExplorationCandidateSelector<>(0.75d))
+						);
+						long twoPhaseEnd = System.currentTimeMillis() + timeout * 1000;
+						List<EnhancedTTSPNode> twoPhaseSolution = twoPhaseSearch.nextSolution();
+						while (twoPhaseSolution != null && System.currentTimeMillis() < twoPhaseEnd) {
+							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(twoPhaseSolution);
+							if (score > solutionScore ) {
+								score = solutionScore;
+							}
+							twoPhaseSolution = twoPhaseSearch.nextSolution();
+						}
 						break;
 					case "pareto":
+						// TODO: Add pareto search
 						break;
 					case "awa-star":
 						AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
 						try {
 							awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator, tsp.getSolutionEvaluator());
-							List<Node<EnhancedTTSPNode, Double>>solution = awaStarSearch.search(timeout);
+							List<Node<EnhancedTTSPNode, Double>> awaStarSolution = awaStarSearch.search(timeout);
 							List<EnhancedTTSPNode> solutionPath = new ArrayList<>();
-							solution.forEach(n -> solutionPath.add(n.getPoint()));
+							awaStarSolution.forEach(n -> solutionPath.add(n.getPoint()));
 							score = tsp.getSolutionEvaluator().evaluateSolution(solutionPath);
 						} catch (Throwable e) {
 							e.printStackTrace();
 						}
 						break;
 					case "r-star":
+						// TODO: Add R* search
 						break;
 					case "mcts":
 						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
 						IPathUpdatablePolicy<EnhancedTTSPNode, String, Double> ucb = new UCBPolicy<>();
-						
 						MCTS<EnhancedTTSPNode, String, Double> mctsSearch = new MCTS<>(
 							tsp.getGraphGenerator(),
 							ucb,
 							randomPolicy,
 							n-> tsp.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
 						);
-						long t = System.currentTimeMillis();
-						long end = t + timeout * 1000;
-						List<EnhancedTTSPNode> solution = mctsSearch.nextSolution();
-						while (solution != null && System.currentTimeMillis() < end) {
-							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(solution);
+						long mctsEnd = System.currentTimeMillis() + timeout * 1000;
+						List<EnhancedTTSPNode> mctsSolution = mctsSearch.nextSolution();
+						while (mctsSolution != null && System.currentTimeMillis() < mctsEnd) {
+							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(mctsSolution);
 							if (score > solutionScore ) {
 								score = solutionScore;
 							}
-							solution = mctsSearch.nextSolution();
+							mctsSolution = mctsSearch.nextSolution();
 						}
 						break;
 				}
