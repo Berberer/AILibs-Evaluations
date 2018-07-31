@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
@@ -31,6 +32,8 @@ import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletio
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
+import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
+import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
 import jaicore.search.evaluationproblems.KnapsackProblem;
 import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
 import jaicore.search.structure.core.Node;
@@ -114,7 +117,20 @@ public class KnapsackExperimenter {
 						}
 						break;
 					case "pareto":
-						// TODO: Add pareto search
+						ORGraphSearch<KnapsackNode, String, Double> paretoSearch = new ORGraphSearch<>(
+							knapsackProblem.getGraphGenerator(),
+							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
+						);
+						paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
+						long paretoEnd = System.currentTimeMillis() + timeout * 1000;
+						List<KnapsackNode> paretoSolution = paretoSearch.nextSolution();
+						while (paretoSolution != null && System.currentTimeMillis() < paretoEnd) {
+							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(paretoSolution);
+							if (score > solutionScore ) {
+								score = solutionScore;
+							}
+							paretoSolution = paretoSearch.nextSolution();
+						}
 						break;
 					case "awa-star":
 						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;

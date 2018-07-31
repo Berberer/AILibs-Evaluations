@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 import org.aeonbits.owner.ConfigCache;
@@ -31,6 +32,8 @@ import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletio
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
+import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
+import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
 import jaicore.search.evaluationproblems.EnhancedTTSP;
 import jaicore.search.evaluationproblems.EnhancedTTSP.EnhancedTTSPNode;
 import jaicore.search.structure.core.Node;
@@ -111,7 +114,20 @@ public class TSPExperimenter {
 						}
 						break;
 					case "pareto":
-						// TODO: Add pareto search
+						ORGraphSearch<EnhancedTTSPNode, String, Double> paretoSearch = new ORGraphSearch<>(
+								tsp.getGraphGenerator(),
+								new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>())
+							);
+							paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
+							long paretoEnd = System.currentTimeMillis() + timeout * 1000;
+							List<EnhancedTTSPNode> paretoSolution = paretoSearch.nextSolution();
+							while (paretoSolution != null && System.currentTimeMillis() < paretoEnd) {
+								Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(paretoSolution);
+								if (score > solutionScore ) {
+									score = solutionScore;
+								}
+								paretoSolution = paretoSearch.nextSolution();
+							}
 						break;
 					case "awa-star":
 						AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
