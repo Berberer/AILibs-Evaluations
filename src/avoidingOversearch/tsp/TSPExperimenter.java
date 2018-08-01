@@ -27,6 +27,8 @@ import jaicore.search.algorithms.standard.mcts.IPolicy;
 import jaicore.search.algorithms.standard.mcts.MCTS;
 import jaicore.search.algorithms.standard.mcts.UCBPolicy;
 import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
+import jaicore.search.algorithms.standard.rstar.RStar;
+import jaicore.search.algorithms.standard.rstar.RandomCompletionGammaGraphGenerator;
 import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
 import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
@@ -142,7 +144,34 @@ public class TSPExperimenter {
 						}
 						break;
 					case "r-star":
-						// TODO: Add R* search
+						RandomCompletionGammaGraphGenerator<EnhancedTTSPNode> ggg = new RandomCompletionGammaGraphGenerator<>(tsp.getGraphGenerator(), tsp.getSolutionEvaluator(), 3, seed);
+						int k, delta;
+						switch ((int)problemSize) {
+							case 50:
+								k = 5;
+								delta = 5;
+								break;
+							case 100:
+								k = 10;
+								delta = 10;
+							case 500:
+								k = 10;
+								delta = 15;
+							case 1000:
+								k = 25;
+								delta = 35;
+							case 5000:
+								k = 30;
+								delta = 50;
+							default:
+								k = 25;
+								delta = 5;
+						}
+						RStar<EnhancedTTSPNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta);
+						rstarSearch.start();
+						Thread.sleep(timeout * 1000);
+						rstarSearch.interrupt();
+						score = tsp.getSolutionEvaluator().evaluateSolution(rstarSearch.getSolutionPath());
 						break;
 					case "mcts":
 						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
