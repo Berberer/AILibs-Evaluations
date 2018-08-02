@@ -17,7 +17,7 @@ import jaicore.experiments.IExperimentSetConfig;
  * @author fmohr
  *
  */
-@Sources({ "file:./examples/avoidingOversearch/autoML/setup.properties" })
+@Sources({ "file:./src/avoidingOversearch/autoML/setup.properties" })
 public interface IExampleMCCConfig extends IExperimentSetConfig {
 	public static final String DATASETS = "datasets";
 	public static final String ALGORITHMS = "algorithms";

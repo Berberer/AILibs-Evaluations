@@ -62,7 +62,7 @@ public class KnapsackExperimenter {
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String algorithmName = description.get("algorithm");
 				int seed = Integer.valueOf(description.get("seed"));
-				double problemSize = Double.valueOf(description.get("problem-size"));
+				double problemSize = Double.valueOf(description.get("problem_size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
 				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize);
 				IPathUnification<KnapsackNode> pathUnification = new IPathUnification<KnapsackNode>() {
@@ -83,7 +83,7 @@ public class KnapsackExperimenter {
 				// Calculate experiment score
 				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
-					case "two-phase":
+					case "two_phase":
 						ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
 							knapsackProblem.getGraphGenerator(),
 							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
@@ -134,7 +134,7 @@ public class KnapsackExperimenter {
 							paretoSolution = paretoSearch.nextSolution();
 						}
 						break;
-					case "awa-star":
+					case "awa_star":
 						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
 						try {
 							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator, knapsackProblem.getSolutionEvaluator());
@@ -146,7 +146,7 @@ public class KnapsackExperimenter {
 							e.printStackTrace();
 						}
 						break;
-					case "r-star":
+					case "r_star":
 						RandomCompletionGammaGraphGenerator<KnapsackNode> ggg = new RandomCompletionGammaGraphGenerator<>(knapsackProblem.getGraphGenerator(), knapsackProblem.getSolutionEvaluator(), 3, seed);
 						int k, delta;
 						switch ((int)problemSize) {

@@ -19,8 +19,6 @@ import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.ml.WekaUtil;
-import weka.classifiers.AbstractClassifier;
-import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.core.Instances;
 
@@ -56,15 +54,15 @@ public class AutoMLExperimenter {
 				MLPlan mlplan = new MLPlan(new File("model/weka/weka-all-autoweka.json"));
 				// TODO: Configure search algorithm
 				switch (algorithmName) {
-					case "ml-plan":
+					case "ml_plan":
 						break;
-					case "two-phase":
+					case "two_phase":
 						break;
 					case "pareto":
 						break;
-					case "awa-star":
+					case "awa_star":
 						break;
-					case "r-star":
+					case "r_star":
 						break;
 					case "mcts":
 						break;

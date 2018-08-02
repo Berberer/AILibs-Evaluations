@@ -17,9 +17,9 @@ import jaicore.experiments.IExperimentSetConfig;
  * @author fmohr
  *
  */
-@Sources({ "file:./examples/avoidingOversearch/tsp/setup.properties" })
+@Sources({ "file:./src/avoidingOversearch/tsp/setup.properties" })
 public interface IExampleMCCConfig extends IExperimentSetConfig {
-	public static final String PROBLEM_SIZES = "problem-sizes";
+	public static final String PROBLEM_SIZES = "problem_sizes";
 	public static final String TIMEOUTS = "timeouts";
 	public static final String ALGORITHMS = "algorithms";
 	public static final String SEEDS = "seeds";

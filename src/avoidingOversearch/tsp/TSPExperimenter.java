@@ -62,7 +62,7 @@ public class TSPExperimenter {
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String algorithmName = description.get("algorithm");
 				int seed = Integer.valueOf(description.get("seed"));
-				double problemSize = Double.valueOf(description.get("problem-size"));
+				double problemSize = Double.valueOf(description.get("problem_size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
 				EnhancedTTSP tsp = createRandomTSP(problemSize);
 				IPathUnification<EnhancedTTSPNode> pathUnification = new IPathUnification<EnhancedTTSPNode>() {
@@ -83,7 +83,7 @@ public class TSPExperimenter {
 				// Calculate experiment score
 				double score = Double.MAX_VALUE;
 				switch (algorithmName) {
-					case "two-phase":
+					case "two_phase":
 						ORGraphSearch<EnhancedTTSPNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
 							tsp.getGraphGenerator(),
 							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>())
@@ -131,7 +131,7 @@ public class TSPExperimenter {
 								paretoSolution = paretoSearch.nextSolution();
 							}
 						break;
-					case "awa-star":
+					case "awa_star":
 						AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
 						try {
 							awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator, tsp.getSolutionEvaluator());
@@ -143,7 +143,7 @@ public class TSPExperimenter {
 							e.printStackTrace();
 						}
 						break;
-					case "r-star":
+					case "r_star":
 						RandomCompletionGammaGraphGenerator<EnhancedTTSPNode> ggg = new RandomCompletionGammaGraphGenerator<>(tsp.getGraphGenerator(), tsp.getSolutionEvaluator(), 3, seed);
 						int k, delta;
 						switch ((int)problemSize) {
