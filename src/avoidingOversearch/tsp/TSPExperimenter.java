@@ -176,7 +176,7 @@ public class TSPExperimenter {
 						break;
 					case "mcts":
 						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
-						IPathUpdatablePolicy<EnhancedTTSPNode, String, Double> ucb = new UCBPolicy<>();
+						IPathUpdatablePolicy<EnhancedTTSPNode, String, Double> ucb = new UCBPolicy<>(false);
 						MCTS<EnhancedTTSPNode, String, Double> mctsSearch = new MCTS<>(
 							tsp.getGraphGenerator(),
 							ucb,
