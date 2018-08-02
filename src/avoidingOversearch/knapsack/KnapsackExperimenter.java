@@ -174,7 +174,9 @@ public class KnapsackExperimenter {
 						rstarSearch.start();
 						Thread.sleep(timeout * 1000);
 						rstarSearch.interrupt();
-						score = knapsackProblem.getSolutionEvaluator().evaluateSolution(rstarSearch.getSolutionPath());
+						ArrayList<KnapsackNode> solution = new ArrayList<>();
+						solution.add(rstarSearch.getGoalState());
+						score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
 						break;
 					case "mcts":
 						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
