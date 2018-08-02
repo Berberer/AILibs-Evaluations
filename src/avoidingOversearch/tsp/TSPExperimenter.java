@@ -171,7 +171,9 @@ public class TSPExperimenter {
 						rstarSearch.start();
 						Thread.sleep(timeout * 1000);
 						rstarSearch.interrupt();
-						score = tsp.getSolutionEvaluator().evaluateSolution(rstarSearch.getSolutionPath());
+						ArrayList<EnhancedTTSPNode> solution = new ArrayList<>();
+						solution.add(rstarSearch.getGoalState());
+						score = tsp.getSolutionEvaluator().evaluateSolution(solution);
 						break;
 					case "mcts":
 						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
