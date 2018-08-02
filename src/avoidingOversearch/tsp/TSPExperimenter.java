@@ -44,8 +44,6 @@ public class TSPExperimenter {
 
 	public static void main(String[] args) {
 		IExampleMCCConfig m = ConfigCache.getOrCreate(IExampleMCCConfig.class);
-		if (m.getDatasetFolder() == null || !m.getDatasetFolder().exists())
-			throw new IllegalArgumentException("config specifies invalid dataset folder " + m.getDatasetFolder());
 
 		ExperimentRunner runner = new ExperimentRunner(new IExperimentSetEvaluator() {
 
@@ -195,7 +193,7 @@ public class TSPExperimenter {
 						}
 						break;
 				}
-				
+				System.out.println(algorithmName + ": " + score);
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
 				processor.processResults(results);
