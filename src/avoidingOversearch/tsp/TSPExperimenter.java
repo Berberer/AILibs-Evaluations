@@ -77,6 +77,7 @@ public class TSPExperimenter {
 					pathUnification,
 					tsp.getSolutionEvaluator()
 				);
+				randomCompletionEvaluator.setGenerator(tsp.getGraphGenerator());
 
 				// Calculate experiment score
 				double score = Double.MAX_VALUE;

@@ -77,6 +77,7 @@ public class KnapsackExperimenter {
 					pathUnification,
 					knapsackProblem.getSolutionEvaluator()
 				);
+				randomCompletionEvaluator.setGenerator(knapsackProblem.getGraphGenerator());
 				
 				// Calculate experiment score
 				double score = Double.MAX_VALUE;
