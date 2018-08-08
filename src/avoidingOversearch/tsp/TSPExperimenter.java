@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 
+import avoidingOversearch.OurExperimentRunner;
+import avoidingOversearch.OurExperimentRunnerAWAStar;
+import jaicore.search.evaluationproblems.KnapsackProblem;
 import org.aeonbits.owner.ConfigCache;
 
 import jaicore.basic.SQLAdapter;
@@ -104,15 +107,11 @@ public class TSPExperimenter {
 							},
 							new BasicExplorationCandidateSelector<>(0.75d))
 						);
-						long twoPhaseEnd = System.currentTimeMillis() + timeout * 1000;
-						List<EnhancedTTSPNode> twoPhaseSolution = twoPhaseSearch.nextSolution();
-						while (twoPhaseSolution != null && System.currentTimeMillis() < twoPhaseEnd) {
-							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(twoPhaseSolution);
-							if (score > solutionScore ) {
-								score = solutionScore;
-							}
-							twoPhaseSolution = twoPhaseSearch.nextSolution();
-						}
+
+						OurExperimentRunner<EnhancedTTSPNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, tsp.getSolutionEvaluator());
+						OurExperimentRunner.execute(twoPhaseER, timeout*1000);
+						score = twoPhaseER.getCostOfBestSolution();
+
 						break;
 					case "pareto":
 						ORGraphSearch<EnhancedTTSPNode, String, Double> paretoSearch = new ORGraphSearch<>(
@@ -121,24 +120,20 @@ public class TSPExperimenter {
 							);
 							// paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
 							paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(12.0*12.0*2.0*problemSize, 1.0))));
-							long paretoEnd = System.currentTimeMillis() + timeout * 1000;
-							List<EnhancedTTSPNode> paretoSolution = paretoSearch.nextSolution();
-							while (paretoSolution != null && System.currentTimeMillis() < paretoEnd) {
-								Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(paretoSolution);
-								if (score > solutionScore ) {
-									score = solutionScore;
-								}
-								paretoSolution = paretoSearch.nextSolution();
-							}
+
+							OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoSearch,
+									tsp.getSolutionEvaluator());
+							OurExperimentRunner.execute(paretoER, timeout*1000);
+							score = paretoER.getCostOfBestSolution();
+
 						break;
 					case "awa_star":
 						AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
 						try {
-							awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator, tsp.getSolutionEvaluator());
-							List<Node<EnhancedTTSPNode, Double>> awaStarSolution = awaStarSearch.search(timeout);
-							List<EnhancedTTSPNode> solutionPath = new ArrayList<>();
-							awaStarSolution.forEach(n -> solutionPath.add(n.getPoint()));
-							score = tsp.getSolutionEvaluator().evaluateSolution(solutionPath);
+							awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator);
+							OurExperimentRunnerAWAStar<EnhancedTTSPNode> awaER = new OurExperimentRunnerAWAStar<>(awaStarSearch, tsp.getSolutionEvaluator());
+							OurExperimentRunner.execute(awaER, timeout*1000);
+							score = awaER.getCostOfBestSolution();
 						} catch (Throwable e) {
 							e.printStackTrace();
 						}
@@ -168,12 +163,22 @@ public class TSPExperimenter {
 								delta = 5;
 						}
 						RStar<EnhancedTTSPNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta);
-						rstarSearch.start();
-						Thread.sleep(timeout * 1000);
-						rstarSearch.interrupt();
+
+						try {
+							rstarSearch.join(timeout * 1000);
+						} catch (InterruptedException e ) {
+							System.out.println("Interrupted while joining RStar.");
+							e.printStackTrace();
+						}
 						ArrayList<EnhancedTTSPNode> solution = new ArrayList<>();
-						solution.add(rstarSearch.getGoalState());
-						score = tsp.getSolutionEvaluator().evaluateSolution(solution);
+						if (rstarSearch.getGoalState() != null) {
+							solution.add(rstarSearch.getGoalState());
+							try {
+								score = tsp.getSolutionEvaluator().evaluateSolution(solution);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
 						break;
 					case "mcts":
 						IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
@@ -184,15 +189,11 @@ public class TSPExperimenter {
 							randomPolicy,
 							n-> tsp.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
 						);
-						long mctsEnd = System.currentTimeMillis() + timeout * 1000;
-						List<EnhancedTTSPNode> mctsSolution = mctsSearch.nextSolution();
-						while (mctsSolution != null && System.currentTimeMillis() < mctsEnd) {
-							Double solutionScore = tsp.getSolutionEvaluator().evaluateSolution(mctsSolution);
-							if (score > solutionScore ) {
-								score = solutionScore;
-							}
-							mctsSolution = mctsSearch.nextSolution();
-						}
+
+						OurExperimentRunner<EnhancedTTSPNode> mctsER = new OurExperimentRunner<>(mctsSearch, tsp.getSolutionEvaluator());
+						OurExperimentRunner.execute(mctsER, timeout*1000);
+						score = mctsER.getCostOfBestSolution();
+
 						break;
 				}
 				System.out.println(algorithmName + ": " + score);

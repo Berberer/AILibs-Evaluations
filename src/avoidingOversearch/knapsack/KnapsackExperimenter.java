@@ -10,6 +10,8 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
+import avoidingOversearch.OurExperimentRunner;
+import avoidingOversearch.OurExperimentRunnerAWAStar;
 import org.aeonbits.owner.ConfigCache;
 
 import jaicore.basic.SQLAdapter;
@@ -80,7 +82,7 @@ public class KnapsackExperimenter {
 				randomCompletionEvaluator.setGenerator(knapsackProblem.getGraphGenerator());
 				
 				// Calculate experiment score
-				double score = Double.MAX_VALUE;
+				Double score = null;
 				switch (algorithmName) {
 					case "two_phase":
 						ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
@@ -107,15 +109,10 @@ public class KnapsackExperimenter {
 							},
 							new BasicExplorationCandidateSelector<>(0.25d))
 						);
-						long twoPhaseEnd = System.currentTimeMillis() + timeout * 1000;
-						List<KnapsackNode> twoPhaseSolution = twoPhaseSearch.nextSolution();
-						while (twoPhaseSolution != null && System.currentTimeMillis() < twoPhaseEnd) {
-							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(twoPhaseSolution);
-							if (score > solutionScore ) {
-								score = solutionScore;
-							}
-							twoPhaseSolution = twoPhaseSearch.nextSolution();
-						}
+
+						OurExperimentRunner<KnapsackProblem.KnapsackNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, knapsackProblem.getSolutionEvaluator());
+						OurExperimentRunner.execute(twoPhaseER, timeout*1000);
+						score = twoPhaseER.getCostOfBestSolution();
 						break;
 					case "pareto":
 						ORGraphSearch<KnapsackNode, String, Double> paretoSearch = new ORGraphSearch<>(
@@ -123,24 +120,20 @@ public class KnapsackExperimenter {
 							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
 						);
 						paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(-1.0*knapsackProblem.getKnapsackCapacity(), 1.0))));
-						long paretoEnd = System.currentTimeMillis() + timeout * 1000;
-						List<KnapsackNode> paretoSolution = paretoSearch.nextSolution();
-						while (paretoSolution != null && System.currentTimeMillis() < paretoEnd) {
-							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(paretoSolution);
-							if (score > solutionScore ) {
-								score = solutionScore;
-							}
-							paretoSolution = paretoSearch.nextSolution();
-						}
+
+						OurExperimentRunner<KnapsackProblem.KnapsackNode> paretoER = new OurExperimentRunner<>(paretoSearch,
+								knapsackProblem.getSolutionEvaluator());
+						OurExperimentRunner.execute(paretoER, timeout*1000);
+						score = paretoER.getCostOfBestSolution();
+
 						break;
 					case "awa_star":
 						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
 						try {
-							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator, knapsackProblem.getSolutionEvaluator());
-							List<Node<KnapsackNode, Double>> awaStarSolution = awaStarSearch.search(timeout);
-							List<KnapsackNode> solutionPath = new ArrayList<>();
-							awaStarSolution.forEach(n -> solutionPath.add(n.getPoint()));
-							score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solutionPath);
+							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator);
+							OurExperimentRunnerAWAStar<KnapsackNode> awaER = new OurExperimentRunnerAWAStar<>(awaStarSearch, knapsackProblem.getSolutionEvaluator());
+							OurExperimentRunner.execute(awaER, timeout*1000);
+							score = awaER.getCostOfBestSolution();
 						} catch (Throwable e) {
 							e.printStackTrace();
 						}
@@ -169,13 +162,23 @@ public class KnapsackExperimenter {
 								k = 5;
 								delta = 5;
 						}
-						RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta);
-						rstarSearch.start();
-						Thread.sleep(timeout * 1000);
-						rstarSearch.interrupt();
-						ArrayList<KnapsackNode> solution = new ArrayList<>();
-						solution.add(rstarSearch.getGoalState());
-						score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+						RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta, knapsackProblem.getSolutionEvaluator());
+
+						try {
+							rstarSearch.join(timeout * 1000);
+						} catch (InterruptedException e ) {
+							System.out.println("Interrupted while joining RStar.");
+							e.printStackTrace();
+						}
+						ArrayList<KnapsackProblem.KnapsackNode> solution = new ArrayList<>();
+						if (rstarSearch.getGoalState() != null) {
+							solution.add(rstarSearch.getGoalState());
+							try {
+								score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
 						break;
 					case "mcts":
 						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
@@ -186,15 +189,10 @@ public class KnapsackExperimenter {
 							randomPolicy,
 							n-> knapsackProblem.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
 						);
-						long mctsEnd = System.currentTimeMillis() + timeout * 1000;
-						List<KnapsackNode> mctsSolution = mctsSearch.nextSolution();
-						while (mctsSolution != null && System.currentTimeMillis() < mctsEnd) {
-							Double solutionScore = knapsackProblem.getSolutionEvaluator().evaluateSolution(mctsSolution);
-							if (score > solutionScore ) {
-								score = solutionScore;
-							}
-							mctsSolution = mctsSearch.nextSolution();
-						}
+
+						OurExperimentRunner<KnapsackProblem.KnapsackNode> mctsER = new OurExperimentRunner<>(mctsSearch, knapsackProblem.getSolutionEvaluator());
+						OurExperimentRunner.execute(mctsER, timeout*1000);
+						score = mctsER.getCostOfBestSolution();
 						break;
 				}
 				System.out.println(algorithmName + ": " + score);
