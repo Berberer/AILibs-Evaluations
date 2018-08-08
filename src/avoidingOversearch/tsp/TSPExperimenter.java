@@ -119,7 +119,8 @@ public class TSPExperimenter {
 								tsp.getGraphGenerator(),
 								new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>())
 							);
-							paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
+							// paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
+							paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(12.0*12.0*2.0*problemSize, 1.0))));
 							long paretoEnd = System.currentTimeMillis() + timeout * 1000;
 							List<EnhancedTTSPNode> paretoSolution = paretoSearch.nextSolution();
 							while (paretoSolution != null && System.currentTimeMillis() < paretoEnd) {
