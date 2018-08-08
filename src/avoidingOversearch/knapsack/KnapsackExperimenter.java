@@ -82,7 +82,7 @@ public class KnapsackExperimenter {
 				randomCompletionEvaluator.setGenerator(knapsackProblem.getGraphGenerator());
 				
 				// Calculate experiment score
-				Double score = null;
+				Double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 					case "two_phase":
 						ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(

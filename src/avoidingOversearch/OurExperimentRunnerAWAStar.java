@@ -9,7 +9,7 @@ import java.util.List;
 public class OurExperimentRunnerAWAStar<T> extends Thread {
 
     private List<T> bestSolution = null;
-    private double costOfBestSolution = 0d;
+    private double costOfBestSolution = Double.MAX_VALUE;
 
     private AwaStarSearch<T, String, Double> search;
     private ISolutionEvaluator<T, Double> solutionEvaluator;

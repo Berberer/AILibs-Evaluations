@@ -53,7 +53,7 @@ public class OurExperimentRunner<T> extends Thread {
                 break;
             }
 
-            System.out.println("Next solution");
+            //System.out.println("Next solution");
             if (bestSolution == null) {
                 bestSolution = currentSolution;
             } else {
