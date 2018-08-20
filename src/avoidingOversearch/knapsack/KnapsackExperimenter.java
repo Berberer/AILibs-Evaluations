@@ -162,19 +162,24 @@ public class KnapsackExperimenter {
 								k = 5;
 								delta = 5;
 						}
-						RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta, knapsackProblem.getSolutionEvaluator());
+						RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 1, k, delta, knapsackProblem.getSolutionEvaluator());
 
 						try {
+							rstarSearch.start();
 							rstarSearch.join(timeout * 1000);
 						} catch (InterruptedException e ) {
 							System.out.println("Interrupted while joining RStar.");
 							e.printStackTrace();
 						}
-						ArrayList<KnapsackProblem.KnapsackNode> solution = new ArrayList<>();
+
+						List<KnapsackProblem.KnapsackNode> solution = null;
 						if (rstarSearch.getGoalState() != null) {
-							solution.add(rstarSearch.getGoalState());
 							try {
-								score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+								solution = rstarSearch.getSolutionPath();
+								if (solution != null) {
+									// Score will be Double.max_value if nothing was found.
+									score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
+								}
 							} catch (Exception e) {
 								e.printStackTrace();
 							}

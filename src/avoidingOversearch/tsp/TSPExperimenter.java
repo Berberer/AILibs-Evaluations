@@ -162,19 +162,24 @@ public class TSPExperimenter {
 								k = 25;
 								delta = 5;
 						}
-						RStar<EnhancedTTSPNode, String, Integer> rstarSearch = new RStar<>(ggg, 0, k, delta);
+						RStar<EnhancedTTSPNode, String, Integer> rstarSearch = new RStar<>(ggg, 1, k, delta);
 
 						try {
+							rstarSearch.start();
 							rstarSearch.join(timeout * 1000);
 						} catch (InterruptedException e ) {
 							System.out.println("Interrupted while joining RStar.");
 							e.printStackTrace();
 						}
-						ArrayList<EnhancedTTSPNode> solution = new ArrayList<>();
+
+						List<EnhancedTTSPNode> solution = null;
 						if (rstarSearch.getGoalState() != null) {
-							solution.add(rstarSearch.getGoalState());
 							try {
-								score = tsp.getSolutionEvaluator().evaluateSolution(solution);
+								solution = rstarSearch.getSolutionPath();
+								if (solution != null) {
+									// Score will be Double.max_value if nothing was found.
+									score = tsp.getSolutionEvaluator().evaluateSolution(solution);
+								}
 							} catch (Exception e) {
 								e.printStackTrace();
 							}
