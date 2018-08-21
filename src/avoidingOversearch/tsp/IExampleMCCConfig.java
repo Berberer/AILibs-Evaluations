@@ -17,7 +17,7 @@ import jaicore.experiments.IExperimentSetConfig;
  * @author fmohr
  *
  */
-@Sources({ "file:./conf/tsp/setup.properties" })
+@Sources({ "file:./setup.properties" })
 public interface IExampleMCCConfig extends IExperimentSetConfig {
 	public static final String PROBLEM_SIZES = "problem_sizes";
 	public static final String TIMEOUTS = "timeouts";

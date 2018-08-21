@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -13,10 +14,12 @@ import java.util.Random;
 import org.aeonbits.owner.ConfigCache;
 
 import avoidingOversearch.OurExperimentRunner;
+import avoidingOversearch.OurExperimentRunnerAWAStar;
 import de.upb.crc901.automl.hascowekaml.WEKAPipelineFactory;
 import de.upb.crc901.automl.pipeline.basic.MLPipeline;
 import hasco.core.HASCOProblemReduction;
 import hasco.core.Util;
+import hasco.model.Component;
 import hasco.model.ComponentInstance;
 import hasco.serialization.ComponentLoader;
 import jaicore.basic.SQLAdapter;
@@ -30,6 +33,8 @@ import jaicore.planning.algorithms.forwarddecomposition.ForwardDecompositionHTNP
 import jaicore.planning.graphgenerators.task.tfd.TFDNode;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.interfaces.ISolutionEvaluator;
+import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
+import jaicore.search.algorithms.standard.bestfirst.BestFirst;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.core.ORGraphSearch;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
@@ -39,8 +44,13 @@ import jaicore.search.algorithms.standard.mcts.UCBPolicy;
 import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
 import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
 import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletionEvaluator;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
+import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
+import jaicore.search.evaluationproblems.KnapsackProblem;
+import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
 import jaicore.search.structure.core.GraphGenerator;
 import weka.core.Instances;
 
@@ -131,6 +141,7 @@ public class AutoMLExperimenter {
 					pathUnification,
 					searchEvaluator
 				);
+				UncertaintyRandomCompletionEvaluator<TFDNode, String, Double> uncertaintyRandomCompletionEvaluator = new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, searchEvaluator, new BasicUncertaintySource<>());
 				ISolutionEvaluator<TFDNode, Double> scoreEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
 					@Override
 					public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
@@ -168,13 +179,44 @@ public class AutoMLExperimenter {
 				Double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 				case "ml_plan":
+					BestFirst<TFDNode, String> bestFirstSearch = new BestFirst<>(graphGenerator, randomCompletionEvaluator);
+					OurExperimentRunner<TFDNode> bestFirstER = new OurExperimentRunner<>(bestFirstSearch, searchEvaluator);
+					OurExperimentRunner.execute(bestFirstER, timeout*1000l);
+					score = scoreEvaluator.evaluateSolution(bestFirstER.getBestSolution());
 					break;
 				case "two_phase":
+					ORGraphSearch<TFDNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
+						graphGenerator,
+						uncertaintyRandomCompletionEvaluator
+					);
+					twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<TFDNode, Double>(
+						timeout * 1000, 50, 0.1, 0.1,
+						new BasicClockModelPhaseLengthAdjuster(),
+						(solution1, solution2) -> {
+							if (solution1 != null && !solution1.isEmpty()) {
+								ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
+										solution1.get(solution1.size() - 1).getState());
+								List<Component> components1 = Util.getComponentsOfComposition(componentInstance1);
+								if (solution2 != null && !solution2.isEmpty()) {
+									ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
+											solution2.get(solution2.size() - 1).getState());
+									List<Component> components2 = Util.getComponentsOfComposition(componentInstance2);
+									
+								}
+							}
+							return Double.MAX_VALUE;
+						},
+						new BasicExplorationCandidateSelector<>(0.25d))
+					);
+
+					OurExperimentRunner<TFDNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, searchEvaluator);
+					OurExperimentRunner.execute(twoPhaseER, timeout*1000);
+					score = scoreEvaluator.evaluateSolution(twoPhaseER.getBestSolution());
 					break;
 				case "pareto":
 					ORGraphSearch<TFDNode, String, Double> paretoSearch = new ORGraphSearch<>(
 						graphGenerator,
-						new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, scoreEvaluator, new BasicUncertaintySource<>())
+						uncertaintyRandomCompletionEvaluator
 					);
 					paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator<TFDNode, Double>(1.0, 1.0))));
 
@@ -183,8 +225,15 @@ public class AutoMLExperimenter {
 					score = scoreEvaluator.evaluateSolution(paretoER.getBestSolution());
 					break;
 				case "awa_star":
-					break;
-				case "r_star":
+					AwaStarSearch<TFDNode, String, Double> awaStarSearch;
+					try {
+						awaStarSearch = new AwaStarSearch<>(graphGenerator, randomCompletionEvaluator);
+						OurExperimentRunnerAWAStar<TFDNode> awaER = new OurExperimentRunnerAWAStar<>(awaStarSearch, searchEvaluator);
+						OurExperimentRunner.execute(awaER, timeout*1000);
+						score = scoreEvaluator.evaluateSolution(awaER.getBestSolution());
+					} catch (Throwable e) {
+						e.printStackTrace();
+					}
 					break;
 				case "mcts":
 					IPolicy<TFDNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
