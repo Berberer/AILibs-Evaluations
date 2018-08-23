@@ -20,6 +20,7 @@ import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
+import jaicore.search.algorithms.standard.bestfirst.BestFirst;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.core.ORGraphSearch;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
@@ -195,6 +196,12 @@ public class KnapsackExperimenter {
 						OurExperimentRunner<KnapsackProblem.KnapsackNode> mctsER = new OurExperimentRunner<>(mctsSearch, knapsackProblem.getSolutionEvaluator());
 						OurExperimentRunner.execute(mctsER, timeout*1000);
 						score = mctsER.getCostOfBestSolution();
+						break;
+					case "best_first":
+						BestFirst<KnapsackNode, String> bestFirstSearch = new BestFirst<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator);
+						OurExperimentRunner<KnapsackNode> bestFirstSearchER = new OurExperimentRunner<>(bestFirstSearch, knapsackProblem.getSolutionEvaluator());
+						OurExperimentRunner.execute(bestFirstSearchER, timeout * 1000);
+						score = bestFirstSearchER.getCostOfBestSolution();
 						break;
 				}
 				System.out.println(algorithmName + ": " + score);

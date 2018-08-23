@@ -21,6 +21,7 @@ import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.graph.LabeledGraph;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
+import jaicore.search.algorithms.standard.bestfirst.BestFirst;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.core.ORGraphSearch;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
@@ -176,6 +177,12 @@ public class TSPExperimenter {
 					OurExperimentRunner.execute(mctsER, timeout * 1000);
 					score = mctsER.getCostOfBestSolution();
 
+					break;
+				case "best_first":
+					BestFirst<EnhancedTTSPNode, String> bestFirstSearch = new BestFirst<>(tsp.getGraphGenerator(), randomCompletionEvaluator);
+					OurExperimentRunner<EnhancedTTSPNode> bestFirstSearchER = new OurExperimentRunner<>(bestFirstSearch, tsp.getSolutionEvaluator());
+					OurExperimentRunner.execute(bestFirstSearchER, timeout * 1000);
+					score = bestFirstSearchER.getCostOfBestSolution();
 					break;
 				}
 				System.out.println(algorithmName + ": " + score);
