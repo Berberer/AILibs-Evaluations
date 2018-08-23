@@ -29,8 +29,9 @@ public class ResultTableCollector {
 				Map<String, String> filter = new HashMap<>();
 				filter.put("timeout", "60");
 				cMLPlan = cMLPlan.select(filter);
-				cMLPlan.projectRemove(new String[] { "experiment_id", "timeout", "seed", "cpus", "memory_max", "time_start", "score_time", "score_memory", "exception", "time_end" });
-				cMLPlan = cMLPlan.group(new String[] { "algorithm", "problem_size"  }, new HashMap<>());
+				cMLPlan.projectRemove(new String[] { "experiment_id", "timeout", "seed", "cpus", "memory_max",
+						"time_start", "score_time", "score_memory", "exception", "time_end" });
+				cMLPlan = cMLPlan.group(new String[] { "algorithm", "problem_size" }, new HashMap<>());
 			}
 		}
 		System.out.println(cMLPlan);
@@ -57,7 +58,8 @@ public class ResultTableCollector {
 				problem_sizes.add(t.getValueAsString("problem_size"));
 			}
 
-			t.store("problem_size", "\\multicolumn{1}{c}{\\rotatebox[origin=l]{90}{" + t.getValueAsString("problem_size") + "}}");
+			t.store("problem_size",
+					"\\multicolumn{1}{c}{\\rotatebox[origin=l]{90}{" + t.getValueAsString("problem_size") + "}}");
 		}
 
 		csvChunks.tTest("problem_size", "algorithm", "score", "two_phase", "ttest");
