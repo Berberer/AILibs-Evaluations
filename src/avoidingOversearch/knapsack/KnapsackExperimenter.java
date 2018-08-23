@@ -1,6 +1,5 @@
 package avoidingOversearch.knapsack;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,10 +9,9 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
-import avoidingOversearch.OurExperimentRunner;
-import avoidingOversearch.OurExperimentRunnerAWAStar;
 import org.aeonbits.owner.ConfigCache;
 
+import avoidingOversearch.OurExperimentRunner;
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
 import jaicore.experiments.ExperimentRunner;
@@ -40,7 +38,6 @@ import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistan
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
 import jaicore.search.evaluationproblems.KnapsackProblem;
 import jaicore.search.evaluationproblems.KnapsackProblem.KnapsackNode;
-import jaicore.search.structure.core.Node;
 
 public class KnapsackExperimenter {
 
@@ -55,8 +52,7 @@ public class KnapsackExperimenter {
 			}
 
 			@Override
-			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter,
-					IExperimentIntermediateResultProcessor processor) throws Exception {
+			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter, IExperimentIntermediateResultProcessor processor) throws Exception {
 
 				// Get experiment setup
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
@@ -67,32 +63,22 @@ public class KnapsackExperimenter {
 				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize);
 				IPathUnification<KnapsackNode> pathUnification = new IPathUnification<KnapsackNode>() {
 					@Override
-					public List<KnapsackNode> getSubsumingKnownPathCompletion(
-							Map<List<KnapsackNode>, List<KnapsackNode>> knownPathCompletions,
-							List<KnapsackNode> path) throws InterruptedException {
+					public List<KnapsackNode> getSubsumingKnownPathCompletion(Map<List<KnapsackNode>, List<KnapsackNode>> knownPathCompletions, List<KnapsackNode> path) throws InterruptedException {
 						return null;
 					}
 				};
-				RandomCompletionEvaluator<KnapsackNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(
-					new Random(seed),
-					3,
-					pathUnification,
-					knapsackProblem.getSolutionEvaluator()
-				);
+				RandomCompletionEvaluator<KnapsackNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(new Random(seed), 3, pathUnification,
+						knapsackProblem.getSolutionEvaluator());
 				randomCompletionEvaluator.setGenerator(knapsackProblem.getGraphGenerator());
-				
+
 				// Calculate experiment score
 				Double score = Double.MAX_VALUE;
 				switch (algorithmName) {
-					case "two_phase":
-						ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(
-							knapsackProblem.getGraphGenerator(),
-							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
-						);
-						twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<KnapsackNode, Double>(
-							timeout * 1000, 50, 0.1, 0.1,
-							new BasicClockModelPhaseLengthAdjuster(),
-							(solution1, solution2) -> {
+				case "two_phase":
+					ORGraphSearch<KnapsackNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(knapsackProblem.getGraphGenerator(),
+							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>()));
+					twoPhaseSearch
+							.setOpen(new UncertaintyExplorationOpenSelection<KnapsackNode, Double>(timeout * 1000, 50, 0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
 								double intersectionSize = 0.0d;
 								List<String> items1 = solution1.get(solution1.size() - 1).getPackedObjects();
 								List<String> items2 = solution2.get(solution2.size() - 1).getPackedObjects();
@@ -106,99 +92,91 @@ public class KnapsackExperimenter {
 								unionSet.addAll(items2);
 								double unionSize = (double) unionSet.size();
 								return (unionSize - intersectionSize) / unionSize;
-							},
-							new BasicExplorationCandidateSelector<>(0.25d))
-						);
+							}, new BasicExplorationCandidateSelector<>(0.25d)));
 
-						OurExperimentRunner<KnapsackProblem.KnapsackNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, knapsackProblem.getSolutionEvaluator());
-						OurExperimentRunner.execute(twoPhaseER, timeout*1000);
-						score = twoPhaseER.getCostOfBestSolution();
+					OurExperimentRunner<KnapsackProblem.KnapsackNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, knapsackProblem.getSolutionEvaluator());
+					OurExperimentRunner.execute(twoPhaseER, timeout * 1000);
+					score = twoPhaseER.getCostOfBestSolution();
+					break;
+				case "pareto":
+					ORGraphSearch<KnapsackNode, String, Double> paretoSearch = new ORGraphSearch<>(knapsackProblem.getGraphGenerator(),
+							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>()));
+					paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(-1.0 * knapsackProblem.getKnapsackCapacity(), 1.0))));
+
+					OurExperimentRunner<KnapsackProblem.KnapsackNode> paretoER = new OurExperimentRunner<>(paretoSearch, knapsackProblem.getSolutionEvaluator());
+					OurExperimentRunner.execute(paretoER, timeout * 1000);
+					score = paretoER.getCostOfBestSolution();
+
+					break;
+				case "awa_star":
+					AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
+					try {
+						awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator);
+						OurExperimentRunner<KnapsackNode> awaER = new OurExperimentRunner<>(awaStarSearch, knapsackProblem.getSolutionEvaluator());
+						OurExperimentRunner.execute(awaER, timeout * 1000);
+						score = awaER.getCostOfBestSolution();
+					} catch (Throwable e) {
+						e.printStackTrace();
+					}
+					break;
+				case "r_star":
+					RandomCompletionGammaGraphGenerator<KnapsackNode> ggg = new RandomCompletionGammaGraphGenerator<>(knapsackProblem.getGraphGenerator(), knapsackProblem.getSolutionEvaluator(), 3,
+							seed);
+					int k, delta;
+					switch ((int) problemSize) {
+					case 50:
+						k = 5;
+						delta = 5;
 						break;
-					case "pareto":
-						ORGraphSearch<KnapsackNode, String, Double> paretoSearch = new ORGraphSearch<>(
-							knapsackProblem.getGraphGenerator(),
-							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, knapsackProblem.getSolutionEvaluator(), new BasicUncertaintySource<>())
-						);
-						paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(-1.0*knapsackProblem.getKnapsackCapacity(), 1.0))));
+					case 100:
+						k = 15;
+						delta = 5;
+					case 500:
+						k = 20;
+						delta = 10;
+					case 1000:
+						k = 50;
+						delta = 25;
+					case 5000:
+						k = 50;
+						delta = 50;
+					default:
+						k = 5;
+						delta = 5;
+					}
+					RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 1, k, delta, knapsackProblem.getSolutionEvaluator());
 
-						OurExperimentRunner<KnapsackProblem.KnapsackNode> paretoER = new OurExperimentRunner<>(paretoSearch,
-								knapsackProblem.getSolutionEvaluator());
-						OurExperimentRunner.execute(paretoER, timeout*1000);
-						score = paretoER.getCostOfBestSolution();
+					try {
+						rstarSearch.start();
+						rstarSearch.join(timeout * 1000);
+					} catch (InterruptedException e) {
+						System.out.println("Interrupted while joining RStar.");
+						e.printStackTrace();
+					}
 
-						break;
-					case "awa_star":
-						AwaStarSearch<KnapsackNode, String, Double> awaStarSearch;
+					List<KnapsackProblem.KnapsackNode> solution = null;
+					if (rstarSearch.getGoalState() != null) {
 						try {
-							awaStarSearch = new AwaStarSearch<>(knapsackProblem.getGraphGenerator(), randomCompletionEvaluator);
-							OurExperimentRunnerAWAStar<KnapsackNode> awaER = new OurExperimentRunnerAWAStar<>(awaStarSearch, knapsackProblem.getSolutionEvaluator());
-							OurExperimentRunner.execute(awaER, timeout*1000);
-							score = awaER.getCostOfBestSolution();
-						} catch (Throwable e) {
-							e.printStackTrace();
-						}
-						break;
-					case "r_star":
-						RandomCompletionGammaGraphGenerator<KnapsackNode> ggg = new RandomCompletionGammaGraphGenerator<>(knapsackProblem.getGraphGenerator(), knapsackProblem.getSolutionEvaluator(), 3, seed);
-						int k, delta;
-						switch ((int)problemSize) {
-							case 50:
-								k = 5;
-								delta = 5;
-								break;
-							case 100:
-								k = 15;
-								delta = 5;
-							case 500:
-								k = 20;
-								delta = 10;
-							case 1000:
-								k = 50;
-								delta = 25;
-							case 5000:
-								k = 50;
-								delta = 50;
-							default:
-								k = 5;
-								delta = 5;
-						}
-						RStar<KnapsackNode, String, Integer> rstarSearch = new RStar<>(ggg, 1, k, delta, knapsackProblem.getSolutionEvaluator());
-
-						try {
-							rstarSearch.start();
-							rstarSearch.join(timeout * 1000);
-						} catch (InterruptedException e ) {
-							System.out.println("Interrupted while joining RStar.");
-							e.printStackTrace();
-						}
-
-						List<KnapsackProblem.KnapsackNode> solution = null;
-						if (rstarSearch.getGoalState() != null) {
-							try {
-								solution = rstarSearch.getSolutionPath();
-								if (solution != null) {
-									// Score will be Double.max_value if nothing was found.
-									score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
-								}
-							} catch (Exception e) {
-								e.printStackTrace();
+							solution = rstarSearch.getSolutionPath();
+							if (solution != null) {
+								// Score will be Double.max_value if nothing was found.
+								score = knapsackProblem.getSolutionEvaluator().evaluateSolution(solution);
 							}
+						} catch (Exception e) {
+							e.printStackTrace();
 						}
-						break;
-					case "mcts":
-						IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
-						IPathUpdatablePolicy<KnapsackNode, String, Double> ucb = new UCBPolicy<>(false);
-						MCTS<KnapsackNode, String, Double> mctsSearch = new MCTS<>(
-							knapsackProblem.getGraphGenerator(),
-							ucb,
-							randomPolicy,
-							n-> knapsackProblem.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint()))
-						);
+					}
+					break;
+				case "mcts":
+					IPolicy<KnapsackNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
+					IPathUpdatablePolicy<KnapsackNode, String, Double> ucb = new UCBPolicy<>(false);
+					MCTS<KnapsackNode, String, Double> mctsSearch = new MCTS<>(knapsackProblem.getGraphGenerator(), ucb, randomPolicy,
+							n -> knapsackProblem.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint())));
 
-						OurExperimentRunner<KnapsackProblem.KnapsackNode> mctsER = new OurExperimentRunner<>(mctsSearch, knapsackProblem.getSolutionEvaluator());
-						OurExperimentRunner.execute(mctsER, timeout*1000);
-						score = mctsER.getCostOfBestSolution();
-						break;
+					OurExperimentRunner<KnapsackProblem.KnapsackNode> mctsER = new OurExperimentRunner<>(mctsSearch, knapsackProblem.getSolutionEvaluator());
+					OurExperimentRunner.execute(mctsER, timeout * 1000);
+					score = mctsER.getCostOfBestSolution();
+					break;
 				}
 				System.out.println(algorithmName + ": " + score);
 				Map<String, Object> results = new HashMap<>();
@@ -208,8 +186,8 @@ public class KnapsackExperimenter {
 		});
 		runner.randomlyConductExperiments(true);
 	}
-	
-	public static KnapsackProblem createRandomKnapsackProblem (double problemSize) {
+
+	public static KnapsackProblem createRandomKnapsackProblem(double problemSize) {
 		Random random = new Random((long) problemSize);
 		int itemAmount = random.nextInt(((int) problemSize / 2)) + 5;
 		HashSet<String> objects = new HashSet<>();
