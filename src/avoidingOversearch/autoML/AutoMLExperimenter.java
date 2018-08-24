@@ -35,6 +35,7 @@ import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
 import jaicore.search.algorithms.standard.bestfirst.BestFirst;
 import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.core.ORGraphSearch;
+import jaicore.search.algorithms.standard.core.TimedNodeEvaluator;
 import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
 import jaicore.search.algorithms.standard.mcts.IPolicy;
 import jaicore.search.algorithms.standard.mcts.MCTS;
@@ -65,7 +66,8 @@ public class AutoMLExperimenter {
 			}
 
 			@Override
-			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter, IExperimentIntermediateResultProcessor processor) throws Exception {
+			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter,
+					IExperimentIntermediateResultProcessor processor) throws Exception {
 
 				/* get experiment setup */
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
@@ -77,11 +79,14 @@ public class AutoMLExperimenter {
 				// Calculate experiment score
 				IPathUnification<TFDNode> pathUnification = new IPathUnification<TFDNode>() {
 					@Override
-					public List<TFDNode> getSubsumingKnownPathCompletion(Map<List<TFDNode>, List<TFDNode>> knownPathCompletions, List<TFDNode> path) throws InterruptedException {
+					public List<TFDNode> getSubsumingKnownPathCompletion(
+							Map<List<TFDNode>, List<TFDNode>> knownPathCompletions, List<TFDNode> path)
+							throws InterruptedException {
 						return null;
 					}
 				};
-				Instances data = new Instances(new BufferedReader(new FileReader(new File(m.getDatasetFolder() + File.separator + datasetName + ".arff"))));
+				Instances data = new Instances(new BufferedReader(
+						new FileReader(new File(m.getDatasetFolder() + File.separator + datasetName + ".arff"))));
 				data.setClassIndex(data.numAttributes() - 1);
 				List<Instances> split = WekaUtil.getStratifiedSplit(data, new Random(seed), 0.6f, 0.2f);
 				Instances train = split.get(0);
@@ -92,16 +97,20 @@ public class AutoMLExperimenter {
 				ComponentLoader componentLoader = new ComponentLoader();
 				componentLoader.loadComponents(configFile);
 				HASCOProblemReduction reduction = new HASCOProblemReduction(configFile, "AbstractClassifier", true);
-				GraphGenerator<TFDNode, String> graphGenerator = reduction.getGraphGeneratorUsedByHASCOForSpecificPlanner(new ForwardDecompositionHTNPlannerFactory<>());
+				GraphGenerator<TFDNode, String> graphGenerator = reduction
+						.getGraphGeneratorUsedByHASCOForSpecificPlanner(new ForwardDecompositionHTNPlannerFactory<>());
 				WEKAPipelineFactory pipelineFactory = new WEKAPipelineFactory();
 				ISolutionEvaluator<TFDNode, Double> searchEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
 					@Override
 					public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
 						if (solutionPath != null && !solutionPath.isEmpty()) {
-							ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(), solutionPath.get(solutionPath.size() - 1).getState());
+							ComponentInstance instance = Util.getSolutionCompositionFromState(
+									componentLoader.getComponents(),
+									solutionPath.get(solutionPath.size() - 1).getState());
 							if (instance != null) {
-								MLPipeline pipeline = pipelineFactory
-										.getComponentInstantiation(Util.getSolutionCompositionFromState(componentLoader.getComponents(), solutionPath.get(solutionPath.size() - 1).getState()));
+								MLPipeline pipeline = pipelineFactory.getComponentInstantiation(
+										Util.getSolutionCompositionFromState(componentLoader.getComponents(),
+												solutionPath.get(solutionPath.size() - 1).getState()));
 								pipeline.buildClassifier(train);
 								double[] prediction = pipeline.classifyInstances(validate);
 								double errorCounter = 0d;
@@ -124,18 +133,25 @@ public class AutoMLExperimenter {
 						return false;
 					}
 				};
-				RandomCompletionEvaluator<TFDNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, searchEvaluator);
-				UncertaintyRandomCompletionEvaluator<TFDNode, String, Double> uncertaintyRandomCompletionEvaluator = new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification,
-						searchEvaluator, new BasicUncertaintySource<>());
+				TimedNodeEvaluator<TFDNode, Double> timedRandomCompletionEvaluator = new TimedNodeEvaluator<>(
+						new RandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, searchEvaluator), 300000,
+						n -> Double.MAX_VALUE);
+				TimedNodeEvaluator<TFDNode, Double> timedUncertaintyRandomCompletionEvaluator = new TimedNodeEvaluator<>(
+						new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification,
+								searchEvaluator, new BasicUncertaintySource<>()),
+						300000, n -> Double.MAX_VALUE);
 				ISolutionEvaluator<TFDNode, Double> scoreEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
 					@Override
 					public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
 
 						if (solutionPath != null && !solutionPath.isEmpty()) {
-							ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(), solutionPath.get(solutionPath.size() - 1).getState());
+							ComponentInstance instance = Util.getSolutionCompositionFromState(
+									componentLoader.getComponents(),
+									solutionPath.get(solutionPath.size() - 1).getState());
 							if (instance != null) {
-								MLPipeline pipeline = pipelineFactory
-										.getComponentInstantiation(Util.getSolutionCompositionFromState(componentLoader.getComponents(), solutionPath.get(solutionPath.size() - 1).getState()));
+								MLPipeline pipeline = pipelineFactory.getComponentInstantiation(
+										Util.getSolutionCompositionFromState(componentLoader.getComponents(),
+												solutionPath.get(solutionPath.size() - 1).getState()));
 								pipeline.buildClassifier(train);
 								double[] prediction = pipeline.classifyInstances(test);
 								double errorCounter = 0d;
@@ -162,33 +178,45 @@ public class AutoMLExperimenter {
 				Double score = Double.MAX_VALUE;
 				switch (algorithmName) {
 				case "ml_plan":
-					BestFirst<TFDNode, String> bestFirstSearch = new BestFirst<>(graphGenerator, randomCompletionEvaluator);
-					OurExperimentRunner<TFDNode> bestFirstER = new OurExperimentRunner<>(bestFirstSearch, searchEvaluator);
+					BestFirst<TFDNode, String> bestFirstSearch = new BestFirst<>(graphGenerator,
+							timedRandomCompletionEvaluator);
+					OurExperimentRunner<TFDNode> bestFirstER = new OurExperimentRunner<>(bestFirstSearch,
+							searchEvaluator);
 					OurExperimentRunner.execute(bestFirstER, timeout * 1000l);
 					score = scoreEvaluator.evaluateSolution(bestFirstER.getBestSolution());
 					break;
 				case "two_phase":
-					ORGraphSearch<TFDNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(graphGenerator, uncertaintyRandomCompletionEvaluator);
-					twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<TFDNode, Double>(timeout * 1000, 50, 0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
-						if (solution1 != null && !solution1.isEmpty()) {
-							ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(componentLoader.getComponents(), solution1.get(solution1.size() - 1).getState());
-							List<Component> components1 = Util.getComponentsOfComposition(componentInstance1);
-							if (solution2 != null && !solution2.isEmpty()) {
-								ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(componentLoader.getComponents(), solution2.get(solution2.size() - 1).getState());
-								List<Component> components2 = Util.getComponentsOfComposition(componentInstance2);
+					ORGraphSearch<TFDNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(graphGenerator,
+							timedUncertaintyRandomCompletionEvaluator);
+					twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<TFDNode, Double>(timeout * 1000, 50,
+							0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
+								if (solution1 != null && !solution1.isEmpty()) {
+									ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(
+											componentLoader.getComponents(),
+											solution1.get(solution1.size() - 1).getState());
+									List<Component> components1 = Util.getComponentsOfComposition(componentInstance1);
+									if (solution2 != null && !solution2.isEmpty()) {
+										ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(
+												componentLoader.getComponents(),
+												solution2.get(solution2.size() - 1).getState());
+										List<Component> components2 = Util
+												.getComponentsOfComposition(componentInstance2);
 
-							}
-						}
-						return Double.MAX_VALUE;
-					}, new BasicExplorationCandidateSelector<>(0.25d)));
+									}
+								}
+								return Double.MAX_VALUE;
+							}, new BasicExplorationCandidateSelector<>(0.25d)));
 
-					OurExperimentRunner<TFDNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, searchEvaluator);
+					OurExperimentRunner<TFDNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch,
+							searchEvaluator);
 					OurExperimentRunner.execute(twoPhaseER, timeout * 1000);
 					score = scoreEvaluator.evaluateSolution(twoPhaseER.getBestSolution());
 					break;
 				case "pareto":
-					ORGraphSearch<TFDNode, String, Double> paretoSearch = new ORGraphSearch<>(graphGenerator, uncertaintyRandomCompletionEvaluator);
-					paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator<TFDNode, Double>(1.0, 1.0))));
+					ORGraphSearch<TFDNode, String, Double> paretoSearch = new ORGraphSearch<>(graphGenerator,
+							timedUncertaintyRandomCompletionEvaluator);
+					paretoSearch.setOpen(new ParetoSelection<>(
+							new PriorityQueue<>(new CosinusDistanceComparator<TFDNode, Double>(1.0, 1.0))));
 
 					OurExperimentRunner<TFDNode> paretoER = new OurExperimentRunner<>(paretoSearch, searchEvaluator);
 					OurExperimentRunner.execute(paretoER, timeout * 1000l);
@@ -197,7 +225,7 @@ public class AutoMLExperimenter {
 				case "awa_star":
 					AwaStarSearch<TFDNode, String, Double> awaStarSearch;
 					try {
-						awaStarSearch = new AwaStarSearch<>(graphGenerator, randomCompletionEvaluator);
+						awaStarSearch = new AwaStarSearch<>(graphGenerator, timedRandomCompletionEvaluator);
 						OurExperimentRunner<TFDNode> awaER = new OurExperimentRunner<>(awaStarSearch, searchEvaluator);
 						OurExperimentRunner.execute(awaER, timeout * 1000);
 						score = scoreEvaluator.evaluateSolution(awaER.getBestSolution());
@@ -208,7 +236,8 @@ public class AutoMLExperimenter {
 				case "mcts":
 					IPolicy<TFDNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
 					IPathUpdatablePolicy<TFDNode, String, Double> ucb = new UCBPolicy<>(false);
-					MCTS<TFDNode, String, Double> mctsSearch = new MCTS<>(graphGenerator, ucb, randomPolicy, n -> searchEvaluator.evaluateSolution(Arrays.asList(n.getPoint())));
+					MCTS<TFDNode, String, Double> mctsSearch = new MCTS<>(graphGenerator, ucb, randomPolicy,
+							n -> searchEvaluator.evaluateSolution(Arrays.asList(n.getPoint())));
 
 					OurExperimentRunner<TFDNode> mctsER = new OurExperimentRunner<>(mctsSearch, searchEvaluator);
 					OurExperimentRunner.execute(mctsER, timeout * 1000l);
