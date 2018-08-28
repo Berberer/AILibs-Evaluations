@@ -3,12 +3,15 @@ package avoidingOversearch.autoML;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
+import java.util.Set;
 
 import org.aeonbits.owner.ConfigCache;
 
@@ -19,6 +22,7 @@ import hasco.core.HASCOProblemReduction;
 import hasco.core.Util;
 import hasco.model.Component;
 import hasco.model.ComponentInstance;
+import hasco.model.Parameter;
 import hasco.serialization.ComponentLoader;
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
@@ -190,22 +194,87 @@ public class AutoMLExperimenter {
 							timedUncertaintyRandomCompletionEvaluator);
 					twoPhaseSearch.setOpen(new UncertaintyExplorationOpenSelection<TFDNode, Double>(timeout * 1000, 50,
 							0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
-								if (solution1 != null && !solution1.isEmpty()) {
-									ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(
-											componentLoader.getComponents(),
-											solution1.get(solution1.size() - 1).getState());
-									List<Component> components1 = Util.getComponentsOfComposition(componentInstance1);
-									if (solution2 != null && !solution2.isEmpty()) {
-										ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(
+								List<Component> components1 = null;
+								List<Component> components2 = null;
+								try {
+									if (solution1 != null && !solution1.isEmpty()) {
+										ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(
 												componentLoader.getComponents(),
-												solution2.get(solution2.size() - 1).getState());
-										List<Component> components2 = Util
-												.getComponentsOfComposition(componentInstance2);
+												solution1.get(solution1.size() - 1).getState());
+										components1 = Util.getComponentsOfComposition(componentInstance1);
+										if (solution2 != null && !solution2.isEmpty()) {
+											ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(
+													componentLoader.getComponents(),
+													solution2.get(solution2.size() - 1).getState());
+											components2 = Util.getComponentsOfComposition(componentInstance2);
+										}
+									}
+								} catch (Exception e) {
+									e.printStackTrace();
+									return Double.MAX_VALUE;
+								}
+								if (components1 != null && components2 != null && !components1.isEmpty()
+										&& !components2.isEmpty()) {
+									Component model1 = null, model2 = null, pp1 = null, pp2 = null;
+									for (Component component : components1) {
+										if (component.getProvidedInterfaces().contains("AbstractPreprocessor")) {
+											pp1 = component;
+										} else if (component.getProvidedInterfaces().contains("AbstractClassifier")) {
+											model1 = component;
+										}
+									}
+									for (Component component : components2) {
+										if (component.getProvidedInterfaces().contains("AbstractPreprocessor")) {
+											pp2 = component;
+										} else if (component.getProvidedInterfaces().contains("AbstractClassifier")) {
+											model2 = component;
+										}
+									}
+									if (model1 != null && model2 != null && pp1 != null && pp2 != null) {
+										boolean sameModel = model1.getName().equals(model2.getName());
+										boolean samePP = pp1.getName().equals(pp2.getName());
+										if (sameModel && samePP) {
+											List<Double> numeric1 = new ArrayList<>();
+											List<Double> numeric2 = new ArrayList<>();
+											Set<String> categorical1 = new HashSet<>();
+											Set<String> categorical2 = new HashSet<>();
+											List<Parameter> pm1 = model1.getParameters().getLinearization();
+											List<Parameter> pm2 = model2.getParameters().getLinearization();
+											List<Parameter> ppp1 = pp1.getParameters().getLinearization();
+											List<Parameter> ppp2 = pp2.getParameters().getLinearization();
 
+											// TODO: Add parameters to the corresponding list
+
+											Double numericDistance = 0.0d;
+											for (int i = 0; i < Math.min(numeric1.size(), numeric2.size()); i++) {
+												numericDistance += Math.pow(numeric1.get(i) - numeric2.get(i), 2);
+											}
+											numericDistance = Math.sqrt(numericDistance);
+
+											Set<String> commonSet = new HashSet<>();
+											commonSet.addAll(categorical1);
+											commonSet.addAll(categorical2);
+											double intersectionSize = 0.0d;
+											for (String s : categorical1) {
+												if (categorical2.contains(s)) {
+													intersectionSize++;
+												}
+											}
+											Double categoricalDistance = (commonSet.size() - intersectionSize)
+													/ commonSet.size();
+
+											return numericDistance + categoricalDistance;
+										} else if (sameModel && !samePP) {
+											return 2;
+										} else if (!sameModel && samePP) {
+											return 3;
+										} else {
+											return 5;
+										}
 									}
 								}
 								return Double.MAX_VALUE;
-							}, new BasicExplorationCandidateSelector<>(0.25d)));
+							}, new BasicExplorationCandidateSelector<>(1d)));
 
 					OurExperimentRunner<TFDNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch,
 							searchEvaluator);
