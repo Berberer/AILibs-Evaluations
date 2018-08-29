@@ -22,6 +22,7 @@ import hasco.core.HASCOProblemReduction;
 import hasco.core.Util;
 import hasco.model.Component;
 import hasco.model.ComponentInstance;
+import hasco.model.NumericParameterDomain;
 import hasco.model.Parameter;
 import hasco.serialization.ComponentLoader;
 import jaicore.basic.SQLAdapter;
@@ -78,7 +79,7 @@ public class AutoMLExperimenter {
 				String algorithmName = description.get("algorithm");
 				String datasetName = description.get("dataset");
 				int seed = Integer.valueOf(description.get("seed"));
-				int timeout = Integer.valueOf(description.get("timeout"));
+				int timeout = 3600;
 
 				// Calculate experiment score
 				IPathUnification<TFDNode> pathUnification = new IPathUnification<TFDNode>() {
@@ -181,7 +182,7 @@ public class AutoMLExperimenter {
 
 				Double score = Double.MAX_VALUE;
 				switch (algorithmName) {
-				case "ml_plan":
+				case "best_first":
 					BestFirst<TFDNode, String> bestFirstSearch = new BestFirst<>(graphGenerator,
 							timedRandomCompletionEvaluator);
 					OurExperimentRunner<TFDNode> bestFirstER = new OurExperimentRunner<>(bestFirstSearch,
@@ -196,25 +197,26 @@ public class AutoMLExperimenter {
 							0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
 								List<Component> components1 = null;
 								List<Component> components2 = null;
+								ComponentInstance componentInstance1 = null;
+								ComponentInstance componentInstance2 = null;
 								try {
 									if (solution1 != null && !solution1.isEmpty()) {
-										ComponentInstance componentInstance1 = Util.getSolutionCompositionFromState(
+										componentInstance1 = Util.getSolutionCompositionFromState(
 												componentLoader.getComponents(),
 												solution1.get(solution1.size() - 1).getState());
 										components1 = Util.getComponentsOfComposition(componentInstance1);
 										if (solution2 != null && !solution2.isEmpty()) {
-											ComponentInstance componentInstance2 = Util.getSolutionCompositionFromState(
+											componentInstance2 = Util.getSolutionCompositionFromState(
 													componentLoader.getComponents(),
 													solution2.get(solution2.size() - 1).getState());
 											components2 = Util.getComponentsOfComposition(componentInstance2);
 										}
 									}
 								} catch (Exception e) {
-									e.printStackTrace();
 									return Double.MAX_VALUE;
 								}
-								if (components1 != null && components2 != null && !components1.isEmpty()
-										&& !components2.isEmpty()) {
+								if (componentInstance1 != null && componentInstance2 != null && components1 != null
+										&& components2 != null && !components1.isEmpty() && !components2.isEmpty()) {
 									Component model1 = null, model2 = null, pp1 = null, pp2 = null;
 									for (Component component : components1) {
 										if (component.getProvidedInterfaces().contains("AbstractPreprocessor")) {
@@ -242,8 +244,88 @@ public class AutoMLExperimenter {
 											List<Parameter> pm2 = model2.getParameters().getLinearization();
 											List<Parameter> ppp1 = pp1.getParameters().getLinearization();
 											List<Parameter> ppp2 = pp2.getParameters().getLinearization();
+											Map<String, String> params1 = componentInstance1.getParameterValues();
+											Map<String, String> params2 = componentInstance2.getParameterValues();
+											if (params1.isEmpty() || params2.isEmpty()) {
+												return 1.0d;
+											}
 
-											// TODO: Add parameters to the corresponding list
+											for (Parameter p : pm1) {
+												if (p.isNumeric()) {
+													String value = params1.get(p.getName());
+													try {
+														Double d = Double.parseDouble(value);
+														numeric1.add((d
+																- ((NumericParameterDomain) p.getDefaultDomain())
+																		.getMin())
+																/ (((NumericParameterDomain) p.getDefaultDomain())
+																		.getMax()
+																		- ((NumericParameterDomain) p
+																				.getDefaultDomain()).getMin()));
+													} catch (Exception e) {
+														numeric1.add(0.0d);
+													}
+												} else if (p.isCategorical()) {
+													categorical1.add(p.getName() + "=" + params1.get(p.getName()));
+												}
+											}
+											for (Parameter p : ppp1) {
+												if (p.isNumeric()) {
+													String value = params1.get(p.getName());
+													try {
+														Double d = Double.parseDouble(value);
+														numeric1.add((d
+																- ((NumericParameterDomain) p.getDefaultDomain())
+																		.getMin())
+																/ (((NumericParameterDomain) p.getDefaultDomain())
+																		.getMax()
+																		- ((NumericParameterDomain) p
+																				.getDefaultDomain()).getMin()));
+													} catch (Exception e) {
+														numeric1.add(0.0d);
+													}
+												} else if (p.isCategorical()) {
+													categorical1.add(p.getName() + "=" + params1.get(p.getName()));
+												}
+											}
+											for (Parameter p : pm2) {
+												if (p.isNumeric()) {
+													String value = params2.get(p.getName());
+													try {
+														Double d = Double.parseDouble(value);
+														numeric2.add((d
+																- ((NumericParameterDomain) p.getDefaultDomain())
+																		.getMin())
+																/ (((NumericParameterDomain) p.getDefaultDomain())
+																		.getMax()
+																		- ((NumericParameterDomain) p
+																				.getDefaultDomain()).getMin()));
+													} catch (Exception e) {
+														numeric2.add(0.0d);
+													}
+												} else if (p.isCategorical()) {
+													categorical2.add(p.getName() + "=" + params2.get(p.getName()));
+												}
+											}
+											for (Parameter p : ppp2) {
+												if (p.isNumeric()) {
+													String value = params2.get(p.getName());
+													try {
+														Double d = Double.parseDouble(value);
+														numeric2.add((d
+																- ((NumericParameterDomain) p.getDefaultDomain())
+																		.getMin())
+																/ (((NumericParameterDomain) p.getDefaultDomain())
+																		.getMax()
+																		- ((NumericParameterDomain) p
+																				.getDefaultDomain()).getMin()));
+													} catch (Exception e) {
+														numeric2.add(0.0d);
+													}
+												} else if (p.isCategorical()) {
+													categorical2.add(p.getName() + "=" + params2.get(p.getName()));
+												}
+											}
 
 											Double numericDistance = 0.0d;
 											for (int i = 0; i < Math.min(numeric1.size(), numeric2.size()); i++) {
@@ -274,7 +356,7 @@ public class AutoMLExperimenter {
 									}
 								}
 								return Double.MAX_VALUE;
-							}, new BasicExplorationCandidateSelector<>(1d)));
+							}, new BasicExplorationCandidateSelector<>(1.5d)));
 
 					OurExperimentRunner<TFDNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch,
 							searchEvaluator);
