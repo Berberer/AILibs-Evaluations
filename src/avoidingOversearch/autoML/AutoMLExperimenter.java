@@ -118,12 +118,12 @@ public class AutoMLExperimenter {
 								pipeline.buildClassifier(train);
 								double[] prediction = pipeline.classifyInstances(validate);
 								double errorCounter = 0d;
-								for (int i = 0; i < test.size(); i++) {
-									if (prediction[i] != test.get(i).classValue()) {
+								for (int i = 0; i < validate.size(); i++) {
+									if (prediction[i] != validate.get(i).classValue()) {
 										errorCounter++;
 									}
 								}
-								return errorCounter / test.size();
+								return errorCounter / validate.size();
 							} else {
 								return Double.MAX_VALUE;
 							}
