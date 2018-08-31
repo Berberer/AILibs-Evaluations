@@ -135,27 +135,46 @@ public class ResultTableCreator {
             p.setMin(seed, minValue);
         }
 
+//        System.out.println("###########");
+//        System.out.println(chunk);
+
         // Normalize averaged scores.
         for (Task t : chunk) {
             // Get max and for for problem size and seed
             Integer problemSize = t.getValueAsInt("problem_size");
             Integer seed = t.getValueAsInt("seed");
-            Double max = problems.get(problemSize).getMax(seed);
-            Double min = problems.get(problemSize).getMin(seed);
-            Double score = t.getValueAsDouble("score_mean");
-            Double normalized = (score - min) / (max - min);
+            Double max = Math.abs(problems.get(problemSize).getMax(seed));
+            Double min = Math.abs(problems.get(problemSize).getMin(seed));
+            Double score = Math.abs(t.getValueAsDouble("score_mean"));
+            Double normalized;
+            if (max - min != 0d) {
+                normalized = Math.abs((score - min) / (max - min));
+            } else {
+                normalized = 1d;
+            }
             t.store("score_mean_norm", normalized);
         }
+
+//        System.out.println("###########");
+//        System.out.println(chunk);
 
         // Group by algorithm and problem size, calculate average of normalized scores
         HashMap<String, TaskChunk.EGroupMethod> groupByAvgNormScore= new HashMap();
         groupByAvgNormScore.put("score_mean_norm", TaskChunk.EGroupMethod.AVG);
         TaskChunk<Task> groupedAvgScore = chunk.group(new String[]{"problem_size", "seed", "algorithm"}, groupByAvgNormScore);
 
+        // Rename problem_size
+//        for (Task t : groupedAvgScore) {
+//            t.store("problem_size",
+//                    "\\multicolumn{1}{c}{\\rotatebox[origin=l]{90}{" + t.getValueAsString("problem_size") + "}}");
+//        }
 
-        // Tests
-        //groupedAvgScore.tTest("problem_size", "algorithm", "score", "pareto", "ttest");
-        //groupedAvgScore.best("problem_size", "algorithm", "score_mean", "best");
+        System.out.println("###########");
+        System.out.println(chunk);
+
+        // TODO: Tests
+        // groupedAvgScore.tTest("problem_size", "algorithm", "score", ALGORITHM, "ttest");
+        // groupedAvgScore.best("problem_size", "algorithm", "score_mean", "best");
         // groupedAvgScore.sort(new TaskKeyComparator(new String[] { "algorithm", "problem_size" }));
 
 
