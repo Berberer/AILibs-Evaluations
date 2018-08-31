@@ -62,7 +62,7 @@ public class KnapsackExperimenter {
 				int seed = Integer.valueOf(description.get("seed"));
 				double problemSize = Double.valueOf(description.get("problem_size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
-				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize);
+				KnapsackProblem knapsackProblem = createRandomKnapsackProblem(problemSize, seed);
 				IPathUnification<KnapsackNode> pathUnification = new IPathUnification<KnapsackNode>() {
 					@Override
 					public List<KnapsackNode> getSubsumingKnownPathCompletion(
@@ -213,8 +213,8 @@ public class KnapsackExperimenter {
 		runner.randomlyConductExperiments(true);
 	}
 	
-	public static KnapsackProblem createRandomKnapsackProblem (double problemSize) {
-		Random random = new Random((long) problemSize);
+	public static KnapsackProblem createRandomKnapsackProblem (double problemSize, int seed) {
+		Random random = new Random(seed);
 		int itemAmount = random.nextInt(((int) problemSize / 2)) + 5;
 		HashSet<String> objects = new HashSet<>();
 		HashMap<String, Double> values = new HashMap<>();

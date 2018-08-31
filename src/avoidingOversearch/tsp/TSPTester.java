@@ -22,7 +22,7 @@ public class TSPTester {
 		double problemSize = 100;
 		int timeout = 60;
 		System.out.print("Generating problem ... ");
-		EnhancedTTSP tsp = TSPExperimenter.createRandomTSP(problemSize);
+		EnhancedTTSP tsp = TSPExperimenter.createRandomTSP(problemSize, seed);
 		System.out.println("done");
 		IPathUnification<EnhancedTTSPNode> pathUnification = new IPathUnification<EnhancedTTSPNode>() {
 			@Override

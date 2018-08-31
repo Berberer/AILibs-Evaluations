@@ -62,7 +62,7 @@ public class TSPExperimenter {
 				int seed = Integer.valueOf(description.get("seed"));
 				double problemSize = Double.valueOf(description.get("problem_size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
-				EnhancedTTSP tsp = createRandomTSP(problemSize);
+				EnhancedTTSP tsp = createRandomTSP(problemSize, seed);
 				IPathUnification<EnhancedTTSPNode> pathUnification = new IPathUnification<EnhancedTTSPNode>() {
 					@Override
 					public List<EnhancedTTSPNode> getSubsumingKnownPathCompletion(Map<List<EnhancedTTSPNode>, List<EnhancedTTSPNode>> knownPathCompletions, List<EnhancedTTSPNode> path)
@@ -194,8 +194,8 @@ public class TSPExperimenter {
 		runner.randomlyConductExperiments(true);
 	}
 
-	public static EnhancedTTSP createRandomTSP(double problemSize) {
-		Random random = new Random((long) problemSize);
+	public static EnhancedTTSP createRandomTSP(double problemSize, int seed) {
+		Random random = new Random(seed);
 		LabeledGraph<Short, Double> minTravelTimesGraph = new LabeledGraph<>();
 		List<Pair<Double, Double>> coordinates = new ArrayList<>();
 		for (short i = 0; i < problemSize; i++) {
