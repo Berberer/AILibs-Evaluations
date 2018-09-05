@@ -2,27 +2,27 @@ package avoidingOversearch;
 
 import java.util.List;
 
-import jaicore.search.algorithms.interfaces.IORGraphSearch;
-import jaicore.search.algorithms.interfaces.ISolutionEvaluator;
+import jaicore.search.algorithms.standard.AbstractORGraphSearch;
+import jaicore.search.model.other.EvaluatedSearchGraphPath;
+import jaicore.search.model.probleminputs.GraphSearchProblemInput;
+import jaicore.search.model.travesaltree.Node;
 
 /**
  * Experiment runner for ORGraphSearches.
  * 
  * @param <T>
  */
-public class OurExperimentRunner<T> extends Thread {
+public class OurExperimentRunner<N> extends Thread {
 
-	private List<T> bestSolution = null;
+	private List<N> bestSolution = null;
 	private Double costOfBestSolution = null;
 
-	private IORGraphSearch<T, String, Double> search;
-	private ISolutionEvaluator<T, Double> solutionEvaluator;
+	private AbstractORGraphSearch<GraphSearchProblemInput<N, String, Double>, Object, N, String, Double, Node<N,Double>, String> search;
 
 	private boolean noNextSolution = false;
 
-	public OurExperimentRunner(IORGraphSearch<T, String, Double> search, ISolutionEvaluator<T, Double> solutionEvaluator) {
+	public OurExperimentRunner(AbstractORGraphSearch<GraphSearchProblemInput<N, String, Double>, Object, N, String, Double, Node<N,Double>, String> search) {
 		this.search = search;
-		this.solutionEvaluator = solutionEvaluator;
 	}
 
 	public static void execute(Thread task, long timeout) {
@@ -46,23 +46,20 @@ public class OurExperimentRunner<T> extends Thread {
 	@Override
 	public void run() {
 		try {
-			// if (search instanceof IObservableORGraphSearch)
-			// new SimpleGraphVisualizationWindow<>((IObservableORGraphSearch) search);
 			while (!isInterrupted()) {
-				List<T> currentSolution = search.nextSolution();
-
-				if (currentSolution == null) {
+				EvaluatedSearchGraphPath<N, String, Double> currentSolution = search.nextSolution();
+				System.out.println("current solution : " + currentSolution);
+				if (currentSolution == null || currentSolution.getNodes() == null || currentSolution.getNodes().isEmpty()) {
 					noNextSolution = true;
 					break;
 				}
-
-				// System.out.println("Next solution");
+				System.out.println("Found Solution: " + currentSolution.getEdges());
 				if (bestSolution == null) {
-					bestSolution = currentSolution;
+					bestSolution = currentSolution.getNodes();
 				} else {
-					double costOfCurrentSolution = solutionEvaluator.evaluateSolution(currentSolution);
+					double costOfCurrentSolution = currentSolution.getScore();
 					if (costOfBestSolution == null || costOfCurrentSolution < costOfBestSolution) {
-						bestSolution = currentSolution;
+						bestSolution = currentSolution.getNodes();
 						costOfBestSolution = costOfCurrentSolution;
 					}
 				}
@@ -72,11 +69,11 @@ public class OurExperimentRunner<T> extends Thread {
 		}
 	}
 
-	public List<T> getBestSolution() {
+	public List<N> getBestSolution() {
 		return bestSolution;
 	}
 
-	public double getCostOfBestSolution() {
+	public Double getCostOfBestSolution() {
 		return costOfBestSolution;
 	}
 
