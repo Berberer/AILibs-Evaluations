@@ -30,22 +30,30 @@ public class TSPTester {
 		EnhancedTTSP tsp = EnhancedTTSP.createRandomProblem(problemSize, seed);
 
 		System.out.println("Testing MCTS ...");
-		testMCTS(tsp, timeout, seed);
+		Double mctsScore = testMCTS(tsp, timeout, seed);
 
 		System.out.println("Testing Awa* ...");
-		testAwaStar(tsp, timeout, seed);
+		Double awaStarScore = testAwaStar(tsp, timeout, seed);
 
 		System.out.println("Testing Best-First ...");
-		testBestFirst(tsp, timeout, seed);
+		Double bestFirstScore = testBestFirst(tsp, timeout, seed);
 		
 		System.out.println("Testing Switch ...");
-		testSwitch(tsp, timeout, seed);
+		Double switchScore = testSwitch(tsp, timeout, seed);
 		
 		System.out.println("Testing Pareto ...");
-		testPareto(tsp, timeout, seed);
+		Double paretoScore = testPareto(tsp, timeout, seed);
+		
+		System.out.println("\n\n\n\n\n\n\n");
+		
+		System.out.println("MCTS-Score: " + mctsScore);
+		System.out.println("Awa*-Score: " + awaStarScore);
+		System.out.println("Best-First-Score: " + bestFirstScore);
+		System.out.println("Switch-Score: " + switchScore);
+		System.out.println("Pareto-Score: " + paretoScore);
 	}
 
-	private static void testMCTS(EnhancedTTSP tsp, int timeout, int seed) {
+	private static Double testMCTS(EnhancedTTSP tsp, int timeout, int seed) {
 		UCTFactory<EnhancedTTSPNode, String> mctsFactory = new UCTFactory<>();
 		mctsFactory.setDefaultPolicy(new UniformRandomPolicy<>(new Random(seed)));
 		mctsFactory.setTreePolicy(new UCBPolicy<>(false));
@@ -53,30 +61,30 @@ public class TSPTester {
 		mctsFactory.setSeed(seed);
 		OurExperimentRunner<EnhancedTTSPNode> mctsER = new OurExperimentRunner<>(mctsFactory.getAlgorithm());
 		OurExperimentRunner.execute(mctsER, timeout * 1000);
-		System.out.println("MCTS-Score: " + mctsER.getCostOfBestSolution());
+		return mctsER.getCostOfBestSolution();
 	}
 
-	private static void testBestFirst(EnhancedTTSP tsp, int timeout, int seed) {
+	private static Double testBestFirst(EnhancedTTSP tsp, int timeout, int seed) {
 		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 		bestFirstFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		OurExperimentRunner<EnhancedTTSPNode> bestFirstER = new OurExperimentRunner<>(bestFirstFactory.getAlgorithm());
 		OurExperimentRunner.execute(bestFirstER, timeout * 1000);
-		System.out.println("Best-First-Score: " + bestFirstER.getCostOfBestSolution());
+		return bestFirstER.getCostOfBestSolution();
 	}
 
-	private static void testAwaStar(EnhancedTTSP tsp, int timeout, int seed) {
+	private static Double testAwaStar(EnhancedTTSP tsp, int timeout, int seed) {
 		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		AWAStarFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> awaStarFactory = new AWAStarFactory<>();
 		awaStarFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		OurExperimentRunner<EnhancedTTSPNode> awaStarER = new OurExperimentRunner<>(awaStarFactory.getAlgorithm());
 		OurExperimentRunner.execute(awaStarER, timeout * seed);
-		System.out.println("Awa*-Score: " + awaStarER.getCostOfBestSolution());
+		return awaStarER.getCostOfBestSolution();
 	}
 
-	private static void testPareto(EnhancedTTSP tsp, int timeout, int seed) {
+	private static Double testPareto(EnhancedTTSP tsp, int timeout, int seed) {
 		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
 				OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
 		paretoConfig.setParetoComperator(new CosinusDistanceComparator<>(2880.0d, 1.0d));
@@ -90,10 +98,10 @@ public class TSPTester {
 		paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
 		OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoFactory.getAlgorithm());
 		OurExperimentRunner.execute(paretoER, timeout * 1000);
-		System.out.println("Pareto-Score: " + paretoER.getCostOfBestSolution());
+		return paretoER.getCostOfBestSolution();
 	}
 
-	private static void testSwitch(EnhancedTTSP tsp, int timeout, int seed) {
+	private static Double testSwitch(EnhancedTTSP tsp, int timeout, int seed) {
 		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> switchConfig = new OversearchAvoidanceConfig<>(
 				OversearchAvoidanceMode.TWO_PHASE_SELECTION, seed);
 		switchConfig.setExploitationScoreThreshold(0.1);
@@ -122,6 +130,6 @@ public class TSPTester {
 		switchFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
 		OurExperimentRunner<EnhancedTTSPNode> switchER = new OurExperimentRunner<>(switchFactory.getAlgorithm());
 		OurExperimentRunner.execute(switchER, timeout * 1000);
-		System.out.println("Switch-Score: " + switchER.getCostOfBestSolution());
+		return switchER.getCostOfBestSolution();
 	}
 }

@@ -17,7 +17,7 @@ public class OurExperimentRunner<N> extends Thread {
 		this.search = search;
 	}
 
-	public static void execute(Thread task, long timeout) {
+	public static void execute(OurExperimentRunner task, long timeout) {
 		task.start();
 		try {
 			task.join(timeout);
@@ -26,6 +26,7 @@ public class OurExperimentRunner<N> extends Thread {
 		}
 		if (task.isAlive()) {
 			try {
+				task.getSearch().cancel();
 				task.interrupt();
 			} catch (IllegalStateException e) {
 				System.err.println("Illegal state catched");
@@ -58,6 +59,10 @@ public class OurExperimentRunner<N> extends Thread {
 		}
 	}
 
+	public AbstractORGraphSearch getSearch () {
+		return this.search;
+	}
+	
 	public List<N> getBestSolution() {
 		return bestSolution;
 	}
