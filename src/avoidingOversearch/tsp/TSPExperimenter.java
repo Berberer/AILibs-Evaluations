@@ -32,14 +32,13 @@ import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
 import jaicore.search.algorithms.standard.rstar.RStar;
 import jaicore.search.algorithms.standard.rstar.RandomCompletionGammaGraphGenerator;
 import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
-import jaicore.search.algorithms.standard.uncertainty.UncertaintyRandomCompletionEvaluator;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
-import jaicore.search.evaluationproblems.EnhancedTTSP;
-import jaicore.search.evaluationproblems.EnhancedTTSP.EnhancedTTSPNode;
+import jaicore.search.testproblems.enhancedttsp.EnhancedTTSPNode;
+import jaicore.search.testproblems.enhancedttsp.EnhancedTTSP;
 
 public class TSPExperimenter {
 
@@ -192,34 +191,6 @@ public class TSPExperimenter {
 			}
 		});
 		runner.randomlyConductExperiments(true);
-	}
-
-	public static EnhancedTTSP createRandomTSP(double problemSize, int seed) {
-		Random random = new Random(seed);
-		LabeledGraph<Short, Double> minTravelTimesGraph = new LabeledGraph<>();
-		List<Pair<Double, Double>> coordinates = new ArrayList<>();
-		for (short i = 0; i < problemSize; i++) {
-			coordinates.add(new Pair<>(random.nextDouble() * 12, random.nextDouble() * 12));
-			minTravelTimesGraph.addItem(i);
-		}
-		for (short i = 0; i < problemSize; i++) {
-			double x1 = coordinates.get(i).getX();
-			double y1 = coordinates.get(i).getY();
-			for (short j = 0; j < i; j++) {
-				double x2 = coordinates.get(j).getX();
-				double y2 = coordinates.get(j).getY();
-				double minTravelTime = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
-				minTravelTimesGraph.addEdge(i, j, minTravelTime);
-				minTravelTimesGraph.addEdge(j, i, minTravelTime);
-			}
-		}
-		;
-		List<Boolean> blockedHours = Arrays.asList(
-				new Boolean[] { true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true });
-		double maxConsecutiveDrivingTime = random.nextInt(5) + 5;
-		double durationOfShortBreak = random.nextInt(3) + 3;
-		double durationOfLongBreak = random.nextInt(6) + 6;
-		return new EnhancedTTSP(minTravelTimesGraph, (short) 0, blockedHours, 8, maxConsecutiveDrivingTime, durationOfShortBreak, durationOfLongBreak);
 	}
 
 }

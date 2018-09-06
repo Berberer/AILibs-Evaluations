@@ -4,24 +4,16 @@ import java.util.List;
 
 import jaicore.search.algorithms.standard.AbstractORGraphSearch;
 import jaicore.search.model.other.EvaluatedSearchGraphPath;
-import jaicore.search.model.probleminputs.GraphSearchProblemInput;
-import jaicore.search.model.travesaltree.Node;
 
-/**
- * Experiment runner for ORGraphSearches.
- * 
- * @param <T>
- */
 public class OurExperimentRunner<N> extends Thread {
 
 	private List<N> bestSolution = null;
 	private Double costOfBestSolution = null;
-
-	private AbstractORGraphSearch<GraphSearchProblemInput<N, String, Double>, Object, N, String, Double, Node<N,Double>, String> search;
+	private AbstractORGraphSearch search;
 
 	private boolean noNextSolution = false;
 
-	public OurExperimentRunner(AbstractORGraphSearch<GraphSearchProblemInput<N, String, Double>, Object, N, String, Double, Node<N,Double>, String> search) {
+	public OurExperimentRunner(AbstractORGraphSearch search) {
 		this.search = search;
 	}
 
@@ -34,7 +26,6 @@ public class OurExperimentRunner<N> extends Thread {
 		}
 		if (task.isAlive()) {
 			try {
-
 				task.interrupt();
 			} catch (IllegalStateException e) {
 				System.err.println("Illegal state catched");
@@ -48,12 +39,10 @@ public class OurExperimentRunner<N> extends Thread {
 		try {
 			while (!isInterrupted()) {
 				EvaluatedSearchGraphPath<N, String, Double> currentSolution = search.nextSolution();
-				System.out.println("current solution : " + currentSolution);
 				if (currentSolution == null || currentSolution.getNodes() == null || currentSolution.getNodes().isEmpty()) {
 					noNextSolution = true;
 					break;
 				}
-				System.out.println("Found Solution: " + currentSolution.getEdges());
 				if (bestSolution == null) {
 					bestSolution = currentSolution.getNodes();
 				} else {
