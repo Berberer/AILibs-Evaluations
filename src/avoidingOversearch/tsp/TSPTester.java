@@ -80,7 +80,7 @@ public class TSPTester {
 		AWAStarFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> awaStarFactory = new AWAStarFactory<>();
 		awaStarFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		OurExperimentRunner<EnhancedTTSPNode> awaStarER = new OurExperimentRunner<>(awaStarFactory.getAlgorithm());
-		OurExperimentRunner.execute(awaStarER, timeout * seed);
+		OurExperimentRunner.execute(awaStarER, timeout * 1000);
 		return awaStarER.getCostOfBestSolution();
 	}
 
