@@ -37,15 +37,15 @@ public class TSPTester {
 
 		System.out.println("Testing Best-First ...");
 		Double bestFirstScore = testBestFirst(tsp, timeout, seed);
-		
+
 		System.out.println("Testing Switch ...");
 		Double switchScore = testSwitch(tsp, timeout, seed);
-		
+
 		System.out.println("Testing Pareto ...");
 		Double paretoScore = testPareto(tsp, timeout, seed);
-		
+
 		System.out.println("\n\n\n\n\n\n\n");
-		
+
 		System.out.println("MCTS-Score: " + mctsScore);
 		System.out.println("Awa*-Score: " + awaStarScore);
 		System.out.println("Best-First-Score: " + bestFirstScore);
@@ -65,8 +65,7 @@ public class TSPTester {
 	}
 
 	private static Double testBestFirst(EnhancedTTSP tsp, int timeout, int seed) {
-		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
-				new Random(seed), 3, tsp.getSolutionEvaluator());
+		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(new Random(seed), 3, tsp.getSolutionEvaluator());
 		BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 		bestFirstFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		OurExperimentRunner<EnhancedTTSPNode> bestFirstER = new OurExperimentRunner<>(bestFirstFactory.getAlgorithm(), tsp.getSolutionEvaluator());
@@ -75,8 +74,7 @@ public class TSPTester {
 	}
 
 	private static Double testAwaStar(EnhancedTTSP tsp, int timeout, int seed) {
-		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
-				new Random(seed), 3, tsp.getSolutionEvaluator());
+		RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(new Random(seed), 3, tsp.getSolutionEvaluator());
 		AWAStarFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> awaStarFactory = new AWAStarFactory<>();
 		awaStarFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		OurExperimentRunner<EnhancedTTSPNode> awaStarER = new OurExperimentRunner<>(awaStarFactory.getAlgorithm(), tsp.getSolutionEvaluator());
@@ -85,16 +83,13 @@ public class TSPTester {
 	}
 
 	private static Double testPareto(EnhancedTTSP tsp, int timeout, int seed) {
-		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
-				OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
+		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
 		paretoConfig.setParetoComperator(new CosinusDistanceComparator<>(2880.0d, 1.0d));
 		UncertaintyORGraphSearchFactory<EnhancedTTSPNode, String, Double> paretoFactory = new UncertaintyORGraphSearchFactory<>();
 		paretoFactory.setConfig(paretoConfig);
-		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
-				new Random(seed), 3, tsp.getSolutionEvaluator());
+		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(new Random(seed), 3, tsp.getSolutionEvaluator());
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
-		paretoFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(
-				tsp.getGraphGenerator(), nodeEvaluator));
+		paretoFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(tsp.getGraphGenerator(), nodeEvaluator));
 		paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
 		OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(paretoER, timeout * 1000);
@@ -102,8 +97,7 @@ public class TSPTester {
 	}
 
 	private static Double testSwitch(EnhancedTTSP tsp, int timeout, int seed) {
-		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> switchConfig = new OversearchAvoidanceConfig<>(
-				OversearchAvoidanceMode.TWO_PHASE_SELECTION, seed);
+		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> switchConfig = new OversearchAvoidanceConfig<>(OversearchAvoidanceMode.TWO_PHASE_SELECTION, seed);
 		switchConfig.setExploitationScoreThreshold(0.1);
 		switchConfig.setExplorationUncertaintyThreshold(0.1);
 		switchConfig.setInterval(50);
@@ -123,8 +117,7 @@ public class TSPTester {
 		switchConfig.activateDynamicPhaseLengthsAdjustment(timeout);
 		UncertaintyORGraphSearchFactory<EnhancedTTSPNode, String, Double> switchFactory = new UncertaintyORGraphSearchFactory<>();
 		switchFactory.setConfig(switchConfig);
-		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
-				new Random(seed), 3, tsp.getSolutionEvaluator());
+		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(new Random(seed), 3, tsp.getSolutionEvaluator());
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 		switchFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		switchFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);

@@ -2,8 +2,8 @@ package avoidingOversearch;
 
 import java.util.List;
 
-import jaicore.search.core.interfaces.ISolutionEvaluator;
 import jaicore.search.algorithms.standard.AbstractORGraphSearch;
+import jaicore.search.core.interfaces.ISolutionEvaluator;
 import jaicore.search.model.other.SearchGraphPath;
 
 public class OurExperimentRunner<N> extends Thread {
@@ -40,8 +40,13 @@ public class OurExperimentRunner<N> extends Thread {
 
 	@Override
 	public void run() {
+		System.exit(0);
 		try {
-			while (!isInterrupted()) {
+			System.out.println("Running algorithm  ... ");
+			System.exit(0);
+			while (search.hasNext()) {
+				System.out.println("Next solution ...");
+				Thread.sleep(1000);
 				SearchGraphPath<N, String> currentSolution = search.nextSolution();
 				if (currentSolution == null || currentSolution.getNodes() == null || currentSolution.getNodes().isEmpty()) {
 					noNextSolution = true;
@@ -62,10 +67,10 @@ public class OurExperimentRunner<N> extends Thread {
 		}
 	}
 
-	public AbstractORGraphSearch getSearch () {
+	public AbstractORGraphSearch getSearch() {
 		return this.search;
 	}
-	
+
 	public List<N> getBestSolution() {
 		return bestSolution;
 	}
