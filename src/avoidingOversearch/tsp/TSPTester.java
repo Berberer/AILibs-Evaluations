@@ -59,7 +59,7 @@ public class TSPTester {
 		mctsFactory.setTreePolicy(new UCBPolicy<>(false));
 		mctsFactory.setProblemInput(new EnhancedTTSPToGraphSearchProblemInputReducer().transform(tsp));
 		mctsFactory.setSeed(seed);
-		OurExperimentRunner<EnhancedTTSPNode> mctsER = new OurExperimentRunner<>(mctsFactory.getAlgorithm());
+		OurExperimentRunner<EnhancedTTSPNode> mctsER = new OurExperimentRunner<EnhancedTTSPNode>(mctsFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(mctsER, timeout * 1000);
 		return mctsER.getCostOfBestSolution();
 	}
@@ -69,7 +69,7 @@ public class TSPTester {
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 		bestFirstFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
-		OurExperimentRunner<EnhancedTTSPNode> bestFirstER = new OurExperimentRunner<>(bestFirstFactory.getAlgorithm());
+		OurExperimentRunner<EnhancedTTSPNode> bestFirstER = new OurExperimentRunner<>(bestFirstFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(bestFirstER, timeout * 1000);
 		return bestFirstER.getCostOfBestSolution();
 	}
@@ -79,7 +79,7 @@ public class TSPTester {
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		AWAStarFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> awaStarFactory = new AWAStarFactory<>();
 		awaStarFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
-		OurExperimentRunner<EnhancedTTSPNode> awaStarER = new OurExperimentRunner<>(awaStarFactory.getAlgorithm());
+		OurExperimentRunner<EnhancedTTSPNode> awaStarER = new OurExperimentRunner<>(awaStarFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(awaStarER, timeout * 1000);
 		return awaStarER.getCostOfBestSolution();
 	}
@@ -96,7 +96,7 @@ public class TSPTester {
 		paretoFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(
 				tsp.getGraphGenerator(), nodeEvaluator));
 		paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
-		OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoFactory.getAlgorithm());
+		OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(paretoER, timeout * 1000);
 		return paretoER.getCostOfBestSolution();
 	}
@@ -128,7 +128,7 @@ public class TSPTester {
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 		switchFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
 		switchFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
-		OurExperimentRunner<EnhancedTTSPNode> switchER = new OurExperimentRunner<>(switchFactory.getAlgorithm());
+		OurExperimentRunner<EnhancedTTSPNode> switchER = new OurExperimentRunner<>(switchFactory.getAlgorithm(), tsp.getSolutionEvaluator());
 		OurExperimentRunner.execute(switchER, timeout * 1000);
 		return switchER.getCostOfBestSolution();
 	}

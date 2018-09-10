@@ -2,19 +2,22 @@ package avoidingOversearch;
 
 import java.util.List;
 
+import jaicore.search.core.interfaces.ISolutionEvaluator;
 import jaicore.search.algorithms.standard.AbstractORGraphSearch;
-import jaicore.search.model.other.EvaluatedSearchGraphPath;
+import jaicore.search.model.other.SearchGraphPath;
 
 public class OurExperimentRunner<N> extends Thread {
 
 	private List<N> bestSolution = null;
 	private Double costOfBestSolution = null;
 	private AbstractORGraphSearch search;
+	private ISolutionEvaluator<N, Double> solutionEvaluator;
 
 	private boolean noNextSolution = false;
 
-	public OurExperimentRunner(AbstractORGraphSearch search) {
+	public OurExperimentRunner(AbstractORGraphSearch search, ISolutionEvaluator<N, Double> iSolutionEvaluator) {
 		this.search = search;
+		this.solutionEvaluator = iSolutionEvaluator;
 	}
 
 	public static void execute(OurExperimentRunner task, long timeout) {
@@ -39,7 +42,7 @@ public class OurExperimentRunner<N> extends Thread {
 	public void run() {
 		try {
 			while (!isInterrupted()) {
-				EvaluatedSearchGraphPath<N, String, Double> currentSolution = search.nextSolution();
+				SearchGraphPath<N, String> currentSolution = search.nextSolution();
 				if (currentSolution == null || currentSolution.getNodes() == null || currentSolution.getNodes().isEmpty()) {
 					noNextSolution = true;
 					break;
@@ -47,7 +50,7 @@ public class OurExperimentRunner<N> extends Thread {
 				if (bestSolution == null) {
 					bestSolution = currentSolution.getNodes();
 				} else {
-					double costOfCurrentSolution = currentSolution.getScore();
+					double costOfCurrentSolution = solutionEvaluator.evaluateSolution(currentSolution.getNodes());
 					if (costOfBestSolution == null || costOfCurrentSolution < costOfBestSolution) {
 						bestSolution = currentSolution.getNodes();
 						costOfBestSolution = costOfCurrentSolution;
