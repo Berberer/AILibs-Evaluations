@@ -1,6 +1,5 @@
 package avoidingOversearch.tsp;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -12,13 +11,11 @@ import org.aeonbits.owner.ConfigCache;
 
 import avoidingOversearch.OurExperimentRunner;
 import jaicore.basic.SQLAdapter;
-import jaicore.basic.sets.SetUtil.Pair;
 import jaicore.experiments.ExperimentDBEntry;
 import jaicore.experiments.ExperimentRunner;
 import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
-import jaicore.graph.LabeledGraph;
 import jaicore.search.algorithms.interfaces.IPathUnification;
 import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
 import jaicore.search.algorithms.standard.bestfirst.BestFirst;
@@ -37,8 +34,8 @@ import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsea
 import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
-import jaicore.search.testproblems.enhancedttsp.EnhancedTTSPNode;
 import jaicore.search.testproblems.enhancedttsp.EnhancedTTSP;
+import jaicore.search.testproblems.enhancedttsp.EnhancedTTSPNode;
 
 public class TSPExperimenter {
 
