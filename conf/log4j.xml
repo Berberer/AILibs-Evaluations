@@ -73,37 +73,21 @@
 		<level value="info" />
 		<appender-ref ref="console" />
 	</logger>
-	
-	<logger name="de.upb.crc901.services.core.HttpServiceServer">
-		<level value="warn" />
-	</logger>
-	
-	<logger name="de.upb.crc901.services.core.HttpServiceClient">
-		<level value="warn" />
-	</logger>
-	
-	<logger name="de.upb.crc901.mlplan.services">
-		<level value="warn" />
-	</logger>
-	
+		
 	<logger name="de.upb.crc901.mlplan.AbstractMLPlan">
 		<level value="debug" />
 	</logger>
-	
-	<logger name="de.upb.crc901.services.core">
-		<level value="warn" />
-	</logger>
-	
+		
 	<logger name="de.upb.crc901.automl.metamining.similaritymeasures">
 		<level value="debug" />
 	</logger>
 	
 	<logger name="jaicore.concurrent">
-		<level value="info" />
+		<level value="debug" />
 	</logger>
 	
-	<logger name="jaicore.search.algorithms.standard.awastar">
-		<level value="info" />
+	<logger name="jaicore.search.algorithms.standard">
+		<level value="warn" />
 	</logger>
 	
 	<logger name="jaicore.search.algorithms.standard.AbstractORGraphSearch">

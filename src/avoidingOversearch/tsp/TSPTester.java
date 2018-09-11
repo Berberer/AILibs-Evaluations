@@ -29,27 +29,27 @@ public class TSPTester {
 		int seed = 1;
 
 		int problemSize = 1000;
-		int timeout = 60;
+		int timeout = 30;
 		System.out.println("Generating problem ... ");
 		EnhancedTTSP tsp = EnhancedTTSP.createRandomProblem(problemSize, seed);
 
-		System.out.println("Testing MCTS ...");
-		Double mctsScore = testMCTS(tsp, timeout, seed);
-		if (Thread.currentThread().isInterrupted())
-			throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
-		System.out.println("MCTS-Score: " + mctsScore);
-
-		System.out.println("Testing Awa* ...");
-		Double awaStarScore = testAwaStar(tsp, timeout, seed);
-		if (Thread.currentThread().isInterrupted())
-			throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
-		System.out.println("Awa*-Score: " + awaStarScore);
-
-		System.out.println("Testing Best-First ...");
-		Double bestFirstScore = testBestFirst(tsp, timeout, seed);
-		if (Thread.currentThread().isInterrupted())
-			throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
-		System.out.println("Best-First-Score: " + bestFirstScore);
+		// System.out.println("Testing MCTS ...");
+		// Double mctsScore = testMCTS(tsp, timeout, seed);
+		// if (Thread.currentThread().isInterrupted())
+		// throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
+		// System.out.println("MCTS-Score: " + mctsScore);
+		//
+		// System.out.println("Testing Awa* ...");
+		// Double awaStarScore = testAwaStar(tsp, timeout, seed);
+		// if (Thread.currentThread().isInterrupted())
+		// throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
+		// System.out.println("Awa*-Score: " + awaStarScore);
+		//
+		// System.out.println("Testing Best-First ...");
+		// Double bestFirstScore = testBestFirst(tsp, timeout, seed);
+		// if (Thread.currentThread().isInterrupted())
+		// throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
+		// System.out.println("Best-First-Score: " + bestFirstScore);
 
 		System.out.println("Testing Switch ...");
 		Double switchScore = testSwitch(tsp, timeout, seed);
@@ -57,11 +57,11 @@ public class TSPTester {
 			throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
 		System.out.println("Switch-Score: " + switchScore);
 
-		System.out.println("Testing Pareto ...");
-		Double paretoScore = testPareto(tsp, timeout, seed);
-		if (Thread.currentThread().isInterrupted())
-			throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
-		System.out.println("Pareto-Score: " + paretoScore);
+		// System.out.println("Testing Pareto ...");
+		// Double paretoScore = testPareto(tsp, timeout, seed);
+		// if (Thread.currentThread().isInterrupted())
+		// throw new IllegalStateException("Executing thread is interrupted, which must not be the case!");
+		// System.out.println("Pareto-Score: " + paretoScore);
 	}
 
 	private static Double testAlgorithm(IGraphSearch<?, ?, EnhancedTTSPNode, String, Double, ?, ?> algorithm, int timeout) throws Exception {
@@ -136,7 +136,7 @@ public class TSPTester {
 		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(new Random(seed), 3, tsp.getSolutionEvaluator());
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 		switchFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
-		switchFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
+		switchFactory.setTimeoutForFComputation(25000, n -> Double.MAX_VALUE);
 		return testAlgorithm(switchFactory.getAlgorithm(), timeout);
 	}
 }
