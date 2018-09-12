@@ -22,6 +22,7 @@ public interface IExampleMCCConfig extends IExperimentSetConfig {
 	public static final String DATASETS = "datasets";
 	public static final String ALGORITHMS = "algorithms";
 	public static final String SEEDS = "seeds";
+	public static final String TIMEOUTS = "timeouts";
 	public static final String datasetFolder = "datasetfolder";
 	
 	@Key(DATASETS)
@@ -32,6 +33,9 @@ public interface IExampleMCCConfig extends IExperimentSetConfig {
 	
 	@Key(SEEDS)
 	public List<String> getSeeds();
+	
+	@Key(TIMEOUTS)
+	public List<String> getTimeouts();
 	
 	@Key(datasetFolder)
 	public File getDatasetFolder();

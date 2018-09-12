@@ -1,41 +1,36 @@
 package avoidingOversearch.tsp;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.aeonbits.owner.ConfigCache;
 
-import avoidingOversearch.OurExperimentRunner;
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
 import jaicore.experiments.ExperimentRunner;
 import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
-import jaicore.search.algorithms.interfaces.IPathUnification;
-import jaicore.search.algorithms.standard.awastar.AwaStarSearch;
-import jaicore.search.algorithms.standard.bestfirst.BestFirst;
-import jaicore.search.algorithms.standard.bestfirst.RandomCompletionEvaluator;
-import jaicore.search.algorithms.standard.core.ORGraphSearch;
-import jaicore.search.algorithms.standard.mcts.IPathUpdatablePolicy;
-import jaicore.search.algorithms.standard.mcts.IPolicy;
-import jaicore.search.algorithms.standard.mcts.MCTS;
+import jaicore.search.algorithms.standard.awastar.AWAStarFactory;
+import jaicore.search.algorithms.standard.bestfirst.BestFirstFactory;
+import jaicore.search.algorithms.standard.bestfirst.nodeevaluation.RandomCompletionBasedNodeEvaluator;
 import jaicore.search.algorithms.standard.mcts.UCBPolicy;
+import jaicore.search.algorithms.standard.mcts.UCTFactory;
 import jaicore.search.algorithms.standard.mcts.UniformRandomPolicy;
-import jaicore.search.algorithms.standard.rstar.RStar;
-import jaicore.search.algorithms.standard.rstar.RandomCompletionGammaGraphGenerator;
 import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
-import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicClockModelPhaseLengthAdjuster;
-import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.BasicExplorationCandidateSelector;
-import jaicore.search.algorithms.standard.uncertainty.explorationexploitationsearch.UncertaintyExplorationOpenSelection;
+import jaicore.search.algorithms.standard.uncertainty.OversearchAvoidanceConfig;
+import jaicore.search.algorithms.standard.uncertainty.UncertaintyORGraphSearchFactory;
+import jaicore.search.algorithms.standard.uncertainty.OversearchAvoidanceConfig.OversearchAvoidanceMode;
 import jaicore.search.algorithms.standard.uncertainty.paretosearch.CosinusDistanceComparator;
-import jaicore.search.algorithms.standard.uncertainty.paretosearch.ParetoSelection;
+import jaicore.search.core.interfaces.IGraphSearch;
+import jaicore.search.model.probleminputs.GeneralEvaluatedTraversalTree;
+import jaicore.search.model.probleminputs.UncertainlyEvaluatedTraversalTree;
 import jaicore.search.testproblems.enhancedttsp.EnhancedTTSP;
 import jaicore.search.testproblems.enhancedttsp.EnhancedTTSPNode;
+import jaicore.search.testproblems.enhancedttsp.EnhancedTTSPToGraphSearchProblemInputReducer;
 
 public class TSPExperimenter {
 
@@ -50,137 +45,96 @@ public class TSPExperimenter {
 			}
 
 			@Override
-			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter, IExperimentIntermediateResultProcessor processor) throws Exception {
+			public void evaluate(ExperimentDBEntry experimentEntry, SQLAdapter adapter,
+					IExperimentIntermediateResultProcessor processor) throws Exception {
 
 				// Get experiment setup
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String algorithmName = description.get("algorithm");
 				int seed = Integer.valueOf(description.get("seed"));
-				double problemSize = Double.valueOf(description.get("problem_size"));
+				int problemSize = Integer.valueOf(description.get("problem_size"));
 				int timeout = Integer.valueOf(description.get("timeout"));
-				EnhancedTTSP tsp = createRandomTSP(problemSize, seed);
-				IPathUnification<EnhancedTTSPNode> pathUnification = new IPathUnification<EnhancedTTSPNode>() {
-					@Override
-					public List<EnhancedTTSPNode> getSubsumingKnownPathCompletion(Map<List<EnhancedTTSPNode>, List<EnhancedTTSPNode>> knownPathCompletions, List<EnhancedTTSPNode> path)
-							throws InterruptedException {
-						return null;
-					}
-				};
-				RandomCompletionEvaluator<EnhancedTTSPNode, Double> randomCompletionEvaluator = new RandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator());
-				randomCompletionEvaluator.setGenerator(tsp.getGraphGenerator());
+				EnhancedTTSP tsp = EnhancedTTSP.createRandomProblem(problemSize, seed);
+				IGraphSearch<?, ?, EnhancedTTSPNode, String, Double, ?, ?> algorithm = null;
+				Double score = null;
 
-				// Calculate experiment score
-				double score = Double.MAX_VALUE;
+				// Configure and create algorithm
+				RandomCompletionBasedNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(
+						new Random(seed), 3, tsp.getSolutionEvaluator());
+				nodeEvaluator.setGenerator(tsp.getGraphGenerator());
+				nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 				switch (algorithmName) {
 				case "two_phase":
-					ORGraphSearch<EnhancedTTSPNode, String, Double> twoPhaseSearch = new ORGraphSearch<>(tsp.getGraphGenerator(),
-							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>()));
-					twoPhaseSearch.setOpen(
-							new UncertaintyExplorationOpenSelection<EnhancedTTSPNode, Double>(timeout * 1000, 50, 0.1, 0.1, new BasicClockModelPhaseLengthAdjuster(), (solution1, solution2) -> {
-								int minLength = Math.min(solution1.size(), solution2.size());
-								int commonPathLength = 0;
-								for (int i = 0; i < minLength; i++) {
-									if (solution1.get(i).getCurLocation() == solution2.get(i).getCurLocation()) {
-										commonPathLength++;
-									} else {
-										break;
-									}
-								}
-								return ((double) minLength - commonPathLength) / ((double) minLength);
-							}, new BasicExplorationCandidateSelector<>(0.75d)));
-
-					OurExperimentRunner<EnhancedTTSPNode> twoPhaseER = new OurExperimentRunner<>(twoPhaseSearch, tsp.getSolutionEvaluator());
-					OurExperimentRunner.execute(twoPhaseER, timeout * 1000);
-					score = twoPhaseER.getCostOfBestSolution();
-
+					OversearchAvoidanceConfig<EnhancedTTSPNode, Double> switchConfig = new OversearchAvoidanceConfig<>(
+							OversearchAvoidanceMode.TWO_PHASE_SELECTION, seed);
+					switchConfig.setExploitationScoreThreshold(0.1);
+					switchConfig.setExplorationUncertaintyThreshold(0.1);
+					switchConfig.setInterval(50);
+					switchConfig.setMinimumSolutionDistanceForExploration(0.75d);
+					switchConfig.setSolutionDistanceMetric((solution1, solution2) -> {
+						int minLength = Math.min(solution1.size(), solution2.size());
+						int commonPathLength = 0;
+						for (int i = 0; i < minLength; i++) {
+							if (solution1.get(i).getCurLocation() == solution2.get(i).getCurLocation()) {
+								commonPathLength++;
+							} else {
+								break;
+							}
+						}
+						return ((double) minLength - commonPathLength) / ((double) minLength);
+					});
+					switchConfig.activateDynamicPhaseLengthsAdjustment(timeout);
+					UncertaintyORGraphSearchFactory<EnhancedTTSPNode, String, Double> switchFactory = new UncertaintyORGraphSearchFactory<>();
+					switchFactory.setConfig(switchConfig);
+					switchFactory.setProblemInput(
+							new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
+					switchFactory.setTimeoutForFComputation(25000, n -> Double.MAX_VALUE);
 					break;
 				case "pareto":
-					ORGraphSearch<EnhancedTTSPNode, String, Double> paretoSearch = new ORGraphSearch<>(tsp.getGraphGenerator(),
-							new UncertaintyRandomCompletionEvaluator<>(new Random(seed), 3, pathUnification, tsp.getSolutionEvaluator(), new BasicUncertaintySource<>()));
-					// paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(1.0, 1.0))));
-					paretoSearch.setOpen(new ParetoSelection<>(new PriorityQueue<>(new CosinusDistanceComparator(12.0 * 12.0 * 2.0 * problemSize, 1.0))));
-
-					OurExperimentRunner<EnhancedTTSPNode> paretoER = new OurExperimentRunner<>(paretoSearch, tsp.getSolutionEvaluator());
-					OurExperimentRunner.execute(paretoER, timeout * 1000);
-					score = paretoER.getCostOfBestSolution();
-
+					OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
+							OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
+					paretoConfig.setParetoComperator(new CosinusDistanceComparator<>(2880.0d, 1.0d));
+					UncertaintyORGraphSearchFactory<EnhancedTTSPNode, String, Double> paretoFactory = new UncertaintyORGraphSearchFactory<>();
+					paretoFactory.setConfig(paretoConfig);
+					paretoFactory
+							.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(
+									tsp.getGraphGenerator(), nodeEvaluator));
+					paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
+					algorithm = paretoFactory.getAlgorithm();
 					break;
 				case "awa_star":
-					AwaStarSearch<EnhancedTTSPNode, String, Double> awaStarSearch;
-					try {
-						awaStarSearch = new AwaStarSearch<>(tsp.getGraphGenerator(), randomCompletionEvaluator);
-						OurExperimentRunner<EnhancedTTSPNode> awaER = new OurExperimentRunner<>(awaStarSearch, tsp.getSolutionEvaluator());
-						OurExperimentRunner.execute(awaER, timeout * 1000);
-						score = awaER.getCostOfBestSolution();
-					} catch (Throwable e) {
-						e.printStackTrace();
-					}
-					break;
-				case "r_star":
-					RandomCompletionGammaGraphGenerator<EnhancedTTSPNode> ggg = new RandomCompletionGammaGraphGenerator<>(tsp.getGraphGenerator(), tsp.getSolutionEvaluator(), 3, seed);
-					int k, delta;
-					switch ((int) problemSize) {
-					case 50:
-						k = 5;
-						delta = 5;
-						break;
-					case 100:
-						k = 10;
-						delta = 10;
-					case 500:
-						k = 10;
-						delta = 15;
-					case 1000:
-						k = 25;
-						delta = 35;
-					case 5000:
-						k = 30;
-						delta = 50;
-					default:
-						k = 25;
-						delta = 5;
-					}
-					RStar<EnhancedTTSPNode, String, Integer> rstarSearch = new RStar<>(ggg, 1, k, delta);
-
-					try {
-						rstarSearch.start();
-						rstarSearch.join(timeout * 1000);
-					} catch (InterruptedException e) {
-						System.out.println("Interrupted while joining RStar.");
-						e.printStackTrace();
-					}
-
-					List<EnhancedTTSPNode> solution = null;
-					if (rstarSearch.getGoalState() != null) {
-						try {
-							solution = rstarSearch.getSolutionPath();
-							if (solution != null) {
-								// Score will be Double.max_value if nothing was found.
-								score = tsp.getSolutionEvaluator().evaluateSolution(solution);
-							}
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
+					AWAStarFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> awaStarFactory = new AWAStarFactory<>();
+					awaStarFactory.setProblemInput(
+							new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
+					algorithm = awaStarFactory.getAlgorithm();
 					break;
 				case "mcts":
-					IPolicy<EnhancedTTSPNode, String, Double> randomPolicy = new UniformRandomPolicy<>(new Random(seed));
-					IPathUpdatablePolicy<EnhancedTTSPNode, String, Double> ucb = new UCBPolicy<>(false);
-					MCTS<EnhancedTTSPNode, String, Double> mctsSearch = new MCTS<>(tsp.getGraphGenerator(), ucb, randomPolicy,
-							n -> tsp.getSolutionEvaluator().evaluateSolution(Arrays.asList(n.getPoint())));
-
-					OurExperimentRunner<EnhancedTTSPNode> mctsER = new OurExperimentRunner<>(mctsSearch, tsp.getSolutionEvaluator());
-					OurExperimentRunner.execute(mctsER, timeout * 1000);
-					score = mctsER.getCostOfBestSolution();
-
+					UCTFactory<EnhancedTTSPNode, String> mctsFactory = new UCTFactory<>();
+					mctsFactory.setDefaultPolicy(new UniformRandomPolicy<>(new Random(seed)));
+					mctsFactory.setTreePolicy(new UCBPolicy<>(false));
+					mctsFactory.setProblemInput(new EnhancedTTSPToGraphSearchProblemInputReducer().transform(tsp));
+					mctsFactory.setSeed(seed);
+					algorithm = mctsFactory.getAlgorithm();
 					break;
 				case "best_first":
-					BestFirst<EnhancedTTSPNode, String> bestFirstSearch = new BestFirst<>(tsp.getGraphGenerator(), randomCompletionEvaluator);
-					OurExperimentRunner<EnhancedTTSPNode> bestFirstSearchER = new OurExperimentRunner<>(bestFirstSearch, tsp.getSolutionEvaluator());
-					OurExperimentRunner.execute(bestFirstSearchER, timeout * 1000);
-					score = bestFirstSearchER.getCostOfBestSolution();
+					BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
+					bestFirstFactory.setProblemInput(
+							new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
+					algorithm = bestFirstFactory.getAlgorithm();
 					break;
 				}
+
+				if (algorithm != null) {
+					algorithm.setTimeout(timeout * 1000, TimeUnit.MILLISECONDS);
+					try {
+						algorithm.call();
+					} catch (TimeoutException e) {
+						System.out.println("algorithm finished with timeout exception, which is ok.");
+					}
+					score = (algorithm.getBestSeenSolution() != null) ? algorithm.getBestSeenSolution().getScore()
+							: null;
+				}
+
 				System.out.println(algorithmName + ": " + score);
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
