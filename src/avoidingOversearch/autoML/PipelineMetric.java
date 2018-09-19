@@ -32,11 +32,11 @@ public class PipelineMetric implements ISolutionDistanceMetric<TFDNode> {
 		try {
 			if (solution1 != null && !solution1.isEmpty()) {
 				componentInstance1 = Util.getSolutionCompositionFromState(components,
-						solution1.get(solution1.size() - 1).getState());
+						solution1.get(solution1.size() - 1).getState(), true);
 				components1 = Util.getComponentsOfComposition(componentInstance1);
 				if (solution2 != null && !solution2.isEmpty()) {
 					componentInstance2 = Util.getSolutionCompositionFromState(components,
-							solution2.get(solution2.size() - 1).getState());
+							solution2.get(solution2.size() - 1).getState(), true);
 					components2 = Util.getComponentsOfComposition(componentInstance2);
 				}
 			}

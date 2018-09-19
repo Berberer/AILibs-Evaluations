@@ -103,11 +103,11 @@ public class AutoMLExperimenter {
 						if (solutionPath != null && !solutionPath.isEmpty()) {
 							ComponentInstance instance = Util.getSolutionCompositionFromState(
 									componentLoader.getComponents(),
-									solutionPath.get(solutionPath.size() - 1).getState());
+									solutionPath.get(solutionPath.size() - 1).getState(), true);
 							if (instance != null) {
 								MLPipeline pipeline = pipelineFactory
 										.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
-												solutionPath.get(solutionPath.size() - 1).getState()));
+												solutionPath.get(solutionPath.size() - 1).getState(), true));
 								pipeline.buildClassifier(train);
 								double[] prediction = pipeline.classifyInstances(validate);
 								double errorCounter = 0d;
@@ -143,12 +143,12 @@ public class AutoMLExperimenter {
 						if (solutionPath != null && !solutionPath.isEmpty()) {
 							ComponentInstance instance = Util.getSolutionCompositionFromState(
 									componentLoader.getComponents(),
-									solutionPath.get(solutionPath.size() - 1).getState());
+									solutionPath.get(solutionPath.size() - 1).getState(), true);
 							if (instance != null) {
 
 								MLPipeline pipeline = pipelineFactory
 										.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
-												solutionPath.get(solutionPath.size() - 1).getState()));
+												solutionPath.get(solutionPath.size() - 1).getState(), true));
 								pipeline.buildClassifier(train);
 								double[] prediction = pipeline.classifyInstances(test);
 								double errorCounter = 0d;
@@ -217,8 +217,7 @@ public class AutoMLExperimenter {
 					break;
 				case "awa_star":
 					AWAStarFactory<GeneralEvaluatedTraversalTree<TFDNode, String, Double>, TFDNode, String, Double> awaStarFactory = new AWAStarFactory<>();
-					awaStarFactory.setProblemInput(
-							new GeneralEvaluatedTraversalTree<>(graphGenerator, nodeEvaluator));
+					awaStarFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(graphGenerator, nodeEvaluator));
 					algorithm = awaStarFactory.getAlgorithm();
 					break;
 				case "mcts":
