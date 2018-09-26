@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'eclipse-wtp'
+	id "com.github.johnrengelman.shadow" version "2.0.4"
 }
 
 sourceSets {
@@ -19,9 +20,19 @@ sourceSets {
     }
 }
 
+jar {
+   manifest {
+       attributes 'Main-Class': 'avoidingOversearch.tsp.TSPExperimenter'
+   }
+}
+
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
     from sourceSets.main.allSource
+}
+
+shadowJar {
+	zip64 true	
 }
 
 artifacts {
