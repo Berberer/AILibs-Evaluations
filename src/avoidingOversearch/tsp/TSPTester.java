@@ -106,7 +106,7 @@ public class TSPTester {
 	private static Double testPareto(EnhancedTTSP tsp, int timeout, int seed) throws Exception {
 		OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
 				OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
-		paretoConfig.setParetoComperator(new CosinusDistanceComparator<>(2880.0d, 1.0d));
+		paretoConfig.setParetoComparator(new CosinusDistanceComparator<>(2880.0d, 1.0d));
 		UncertaintyORGraphSearchFactory<EnhancedTTSPNode, String, Double> paretoFactory = new UncertaintyORGraphSearchFactory<>();
 		paretoFactory.setConfig(paretoConfig);
 		IUncertaintyAnnotatingNodeEvaluator<EnhancedTTSPNode, Double> nodeEvaluator = new RandomCompletionBasedNodeEvaluator<>(

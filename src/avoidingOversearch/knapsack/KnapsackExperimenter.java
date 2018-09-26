@@ -99,7 +99,7 @@ public class KnapsackExperimenter {
 				case "pareto":
 					OversearchAvoidanceConfig<KnapsackNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
 							OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
-					paretoConfig.setParetoComperator(
+					paretoConfig.setParetoComparator(
 							new CosinusDistanceComparator<>(-1.0 * knapsack.getKnapsackCapacity(), 1.0d));
 					UncertaintyORGraphSearchFactory<KnapsackNode, String, Double> paretoFactory = new UncertaintyORGraphSearchFactory<>();
 					paretoFactory.setConfig(paretoConfig);

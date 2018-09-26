@@ -207,7 +207,7 @@ public class AutoMLExperimenter {
 				case "pareto":
 					OversearchAvoidanceConfig<TFDNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
 							OversearchAvoidanceMode.PARETO_FRONT_SELECTION, seed);
-					paretoConfig.setParetoComperator(new CosinusDistanceComparator<>(-1.0d, 1.0d));
+					paretoConfig.setParetoComparator(new CosinusDistanceComparator<>(-1.0d, 1.0d));
 					UncertaintyORGraphSearchFactory<TFDNode, String, Double> paretoFactory = new UncertaintyORGraphSearchFactory<>();
 					paretoFactory.setConfig(paretoConfig);
 					paretoFactory
