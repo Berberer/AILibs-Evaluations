@@ -88,7 +88,10 @@ public class TSPExperimenter {
 					switchFactory.setConfig(switchConfig);
 					switchFactory.setProblemInput(
 							new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
-					switchFactory.setTimeoutForFComputation(25000, n -> Double.MAX_VALUE);
+					switchFactory.setTimeoutForFComputation(5000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					break;
 				case "pareto":
 					OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
@@ -99,7 +102,10 @@ public class TSPExperimenter {
 					paretoFactory
 							.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(
 									tsp.getGraphGenerator(), nodeEvaluator));
-					paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
+					paretoFactory.setTimeoutForFComputation(5000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					algorithm = paretoFactory.getAlgorithm();
 					break;
 				case "awa_star":
@@ -120,6 +126,7 @@ public class TSPExperimenter {
 					BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 					bestFirstFactory.setProblemInput(
 							new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
+					bestFirstFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
 					algorithm = bestFirstFactory.getAlgorithm();
 					break;
 				}

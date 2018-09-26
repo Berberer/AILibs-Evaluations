@@ -91,6 +91,7 @@ public class TSPTester {
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		BestFirstFactory<GeneralEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>, EnhancedTTSPNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 		bestFirstFactory.setProblemInput(new GeneralEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
+		bestFirstFactory.setTimeoutForFComputation(30000, n -> Double.MAX_VALUE);
 		return testAlgorithm(bestFirstFactory.getAlgorithm(), timeout);
 	}
 
@@ -114,7 +115,10 @@ public class TSPTester {
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 		paretoFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<EnhancedTTSPNode, String, Double>(
 				tsp.getGraphGenerator(), nodeEvaluator));
-		paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
+		paretoFactory.setTimeoutForFComputation(30000, n ->  {
+			n.setAnnotation("uncertainty", 1);
+			return Double.MAX_VALUE;
+		});
 		return testAlgorithm(paretoFactory.getAlgorithm(), timeout);
 	}
 
@@ -144,7 +148,10 @@ public class TSPTester {
 				new Random(seed), 3, tsp.getSolutionEvaluator());
 		nodeEvaluator.setUncertaintySource(new BasicUncertaintySource<>());
 		switchFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(tsp.getGraphGenerator(), nodeEvaluator));
-		switchFactory.setTimeoutForFComputation(25000, n -> Double.MAX_VALUE);
+		switchFactory.setTimeoutForFComputation(30000, n ->  {
+			n.setAnnotation("uncertainty", 1);
+			return Double.MAX_VALUE;
+		});
 		return testAlgorithm(switchFactory.getAlgorithm(), timeout);
 	}
 }

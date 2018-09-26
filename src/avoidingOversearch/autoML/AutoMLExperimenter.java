@@ -186,7 +186,7 @@ public class AutoMLExperimenter {
 					BestFirstFactory<GeneralEvaluatedTraversalTree<TFDNode, String, Double>, TFDNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 					bestFirstFactory
 							.setProblemInput(new GeneralEvaluatedTraversalTree<>(graphGenerator, nodeEvaluator));
-					bestFirstFactory.setTimeoutForFComputation(10000, n -> Double.MAX_VALUE);
+					bestFirstFactory.setTimeoutForFComputation(600000, n -> Double.MAX_VALUE);
 					algorithm = bestFirstFactory.getAlgorithm();
 					break;
 				case "two_phase":
@@ -202,7 +202,10 @@ public class AutoMLExperimenter {
 					switchFactory.setConfig(switchConfig);
 					switchFactory
 							.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(graphGenerator, nodeEvaluator));
-					switchFactory.setTimeoutForFComputation(10000, n -> Double.MAX_VALUE);
+					switchFactory.setTimeoutForFComputation(600000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					break;
 				case "pareto":
 					OversearchAvoidanceConfig<TFDNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
@@ -212,7 +215,10 @@ public class AutoMLExperimenter {
 					paretoFactory.setConfig(paretoConfig);
 					paretoFactory
 							.setProblemInput(new UncertainlyEvaluatedTraversalTree<>(graphGenerator, nodeEvaluator));
-					paretoFactory.setTimeoutForFComputation(10000, n -> Double.MAX_VALUE);
+					paretoFactory.setTimeoutForFComputation(600000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					algorithm = paretoFactory.getAlgorithm();
 					break;
 				case "awa_star":

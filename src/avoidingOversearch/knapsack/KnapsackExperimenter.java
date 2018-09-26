@@ -94,7 +94,10 @@ public class KnapsackExperimenter {
 					switchFactory.setConfig(switchConfig);
 					switchFactory.setProblemInput(
 							new UncertainlyEvaluatedTraversalTree<>(knapsack.getGraphGenerator(), nodeEvaluator));
-					switchFactory.setTimeoutForFComputation(25000, n -> Double.MAX_VALUE);
+					switchFactory.setTimeoutForFComputation(5000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					break;
 				case "pareto":
 					OversearchAvoidanceConfig<KnapsackNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
@@ -105,7 +108,10 @@ public class KnapsackExperimenter {
 					paretoFactory.setConfig(paretoConfig);
 					paretoFactory.setProblemInput(new UncertainlyEvaluatedTraversalTree<KnapsackNode, String, Double>(
 							knapsack.getGraphGenerator(), nodeEvaluator));
-					paretoFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
+					paretoFactory.setTimeoutForFComputation(5000, n -> {
+						n.setAnnotation("uncertainty", 1);
+						return Double.MAX_VALUE;
+					});
 					algorithm = paretoFactory.getAlgorithm();
 					break;
 				case "awa_star":
@@ -126,6 +132,7 @@ public class KnapsackExperimenter {
 					BestFirstFactory<GeneralEvaluatedTraversalTree<KnapsackNode, String, Double>, KnapsackNode, String, Double> bestFirstFactory = new BestFirstFactory<>();
 					bestFirstFactory.setProblemInput(
 							new GeneralEvaluatedTraversalTree<>(knapsack.getGraphGenerator(), nodeEvaluator));
+					bestFirstFactory.setTimeoutForFComputation(5000, n -> Double.MAX_VALUE);
 					algorithm = bestFirstFactory.getAlgorithm();
 					break;
 				}
