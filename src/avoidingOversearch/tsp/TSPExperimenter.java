@@ -92,6 +92,7 @@ public class TSPExperimenter {
 						n.setAnnotation("uncertainty", 1);
 						return Double.MAX_VALUE;
 					});
+					algorithm = switchFactory.getAlgorithm();
 					break;
 				case "pareto":
 					OversearchAvoidanceConfig<EnhancedTTSPNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(

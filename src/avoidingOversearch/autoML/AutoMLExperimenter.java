@@ -206,6 +206,7 @@ public class AutoMLExperimenter {
 						n.setAnnotation("uncertainty", 1);
 						return Double.MAX_VALUE;
 					});
+					algorithm = switchFactory.getAlgorithm();
 					break;
 				case "pareto":
 					OversearchAvoidanceConfig<TFDNode, Double> paretoConfig = new OversearchAvoidanceConfig<>(
