@@ -36,10 +36,15 @@ import weka.core.Instances;
 
 public class AutoMLTest {
 
+	private static WEKAPipelineFactory pipelineFactory;
+	private static ComponentLoader componentLoader;
+	private static Collection<Component> components;
+	private static Instances train;
+	
 	public static void main(String[] args) throws Exception {
-		int seed = 123;
-		int timeout = 120;
-		int dataset = 40983;
+		int seed = 16;
+		int timeout = 30;
+		int dataset = 21;
 
 		OpenmlConnector connector = new OpenmlConnector();
 		DataSetDescription ds = connector.dataGet(dataset);
@@ -47,7 +52,7 @@ public class AutoMLTest {
 		Instances data = new Instances(new BufferedReader(new FileReader(file)));
 		data.setClassIndex(data.numAttributes() - 1);
 		List<Instances> split = WekaUtil.getStratifiedSplit(data, new Random(seed), 0.6f, 0.2f);
-		Instances train = split.get(0);
+		train = split.get(0);
 		Instances validate = split.get(1);
 		Instances test = split.get(2);
 
@@ -56,10 +61,10 @@ public class AutoMLTest {
 
 		// Load Haso Components for Weka
 		File configFile = new File("conf/automl/searchmodels/weka/weka-all-autoweka.json");
-		ComponentLoader componentLoader = new ComponentLoader();
+		componentLoader = new ComponentLoader();
 		componentLoader.loadComponents(configFile);
-		Collection<Component> components = componentLoader.getComponents();
-		WEKAPipelineFactory pipelineFactory = new WEKAPipelineFactory();
+		components = componentLoader.getComponents();
+		pipelineFactory = new WEKAPipelineFactory();
 
 		// Get Graph generator
 		MLPlanWekaClassifier mlplan = new WekaMLPlanWekaClassifier();
@@ -70,68 +75,7 @@ public class AutoMLTest {
 		ISolutionEvaluator<TFDNode, Double> searchEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
 			@Override
 			public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
-				if (solutionPath != null && !solutionPath.isEmpty()) {
-					ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
-							solutionPath.get(solutionPath.size() - 1).getState(), true);
-					if (instance != null) {
-						MLPipeline pipeline = pipelineFactory
-								.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
-										solutionPath.get(solutionPath.size() - 1).getState(), true));
-						pipeline.buildClassifier(train);
-						double[] prediction = pipeline.classifyInstances(validate);
-						double errorCounter = 0d;
-						for (int i = 0; i < validate.size(); i++) {
-							if (prediction[i] != validate.get(i).classValue()) {
-								errorCounter++;
-							}
-						}
-						return errorCounter / validate.size();
-					} else {
-						return Double.MAX_VALUE;
-					}
-				} else {
-					return Double.MAX_VALUE;
-				}
-			}
-
-			@Override
-			public boolean doesLastActionAffectScoreOfAnySubsequentSolution(List<TFDNode> partialSolutionPath) {
-				return false;
-			}
-
-			@Override
-			public void cancel() {
-			}
-		};
-
-		// Create solution evluator for the final score after the search
-		ISolutionEvaluator<TFDNode, Double> scoreEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
-			@Override
-			public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
-
-				if (solutionPath != null && !solutionPath.isEmpty()) {
-					ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
-							solutionPath.get(solutionPath.size() - 1).getState(), true);
-					if (instance != null) {
-
-						MLPipeline pipeline = pipelineFactory
-								.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
-										solutionPath.get(solutionPath.size() - 1).getState(), true));
-						pipeline.buildClassifier(train);
-						double[] prediction = pipeline.classifyInstances(test);
-						double errorCounter = 0d;
-						for (int i = 0; i < test.size(); i++) {
-							if (prediction[i] != test.get(i).classValue()) {
-								errorCounter++;
-							}
-						}
-						return errorCounter / test.size();
-					} else {
-						return Double.MAX_VALUE;
-					}
-				} else {
-					return Double.MAX_VALUE;
-				}
+				return calculateScore(solutionPath, validate);
 			}
 
 			@Override
@@ -168,17 +112,48 @@ public class AutoMLTest {
 		algorithm = switchFactory.getAlgorithm();
 
 		// Start search algorithm
-		new VisualizationWindow<>(algorithm);
+//		new VisualizationWindow<>(algorithm);
 		algorithm.setTimeout(timeout * 1000, TimeUnit.MILLISECONDS);
 		try {
 			algorithm.call();
 		} catch (TimeoutException e) {
 			System.out.println("algorithm finished with timeout exception, which is ok.");
 		}
-		score = (algorithm.getBestSeenSolution() != null)
-				? scoreEvaluator.evaluateSolution(algorithm.getBestSeenSolution().getNodes())
-				: null;
-		System.out.println("Switch-Search: " + score);
+		System.out.println("Evaluating best found pipeline");
+		try {
+			score = (algorithm.getBestSeenSolution() != null)
+					? calculateScore(algorithm.getBestSeenSolution().getNodes(), test)
+					: null;
+			System.out.println("Switch-Search: " + score);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	private static Double calculateScore (List<TFDNode> solutionPath, Instances data) throws Exception {
+		if (solutionPath != null && !solutionPath.isEmpty()) {
+			ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
+					solutionPath.get(solutionPath.size() - 1).getState(), true);
+			if (instance != null) {
+				MLPipeline pipeline = pipelineFactory
+						.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
+								solutionPath.get(solutionPath.size() - 1).getState(), true));
+				pipeline.buildClassifier(train);
+				double[] prediction = pipeline.classifyInstances(data);
+				double errorCounter = 0d;
+				for (int i = 0; i < data.size(); i++) {
+					if (prediction[i] != data.get(i).classValue()) {
+						errorCounter++;
+					}
+				}
+				return errorCounter / data.size();
+			} else {
+				return Double.MAX_VALUE;
+			}
+		} else {
+			return Double.MAX_VALUE;
+		}
 	}
 
 }
