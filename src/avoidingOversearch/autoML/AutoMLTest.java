@@ -12,16 +12,15 @@ import java.util.concurrent.TimeoutException;
 import org.openml.apiconnector.io.OpenmlConnector;
 import org.openml.apiconnector.xml.DataSetDescription;
 
+import de.upb.crc901.mlpipeline_evaluation.DatasetOrigin;
+import de.upb.crc901.mlpipeline_evaluation.PipelineEvaluationCache;
 import de.upb.crc901.mlplan.multiclass.wekamlplan.MLPlanWekaClassifier;
-import de.upb.crc901.mlplan.multiclass.wekamlplan.weka.WEKAPipelineFactory;
 import de.upb.crc901.mlplan.multiclass.wekamlplan.weka.WekaMLPlanWekaClassifier;
-import de.upb.crc901.mlplan.multiclass.wekamlplan.weka.model.MLPipeline;
 import hasco.core.Util;
 import hasco.model.Component;
-import hasco.model.ComponentInstance;
 import hasco.serialization.ComponentLoader;
+import jaicore.basic.SQLAdapter;
 import jaicore.graphvisualizer.gui.VisualizationWindow;
-import jaicore.ml.WekaUtil;
 import jaicore.planning.graphgenerators.task.tfd.TFDNode;
 import jaicore.search.algorithms.standard.bestfirst.nodeevaluation.RandomCompletionBasedNodeEvaluator;
 import jaicore.search.algorithms.standard.uncertainty.BasicUncertaintySource;
@@ -36,35 +35,38 @@ import weka.core.Instances;
 
 public class AutoMLTest {
 
-	private static WEKAPipelineFactory pipelineFactory;
-	private static ComponentLoader componentLoader;
-	private static Collection<Component> components;
-	private static Instances train;
-	
+	private static final int CAR = 21;
+	private static final int CREDIT_G = 31;
+	private static final int GLASS = 41;
+	private static final int ABALONE = 183;
+	private static final int QUAKE = 209;
+
 	public static void main(String[] args) throws Exception {
 		int seed = 16;
 		int timeout = 30;
-		int dataset = 21;
+		int dataset = CAR;
 
 		OpenmlConnector connector = new OpenmlConnector();
 		DataSetDescription ds = connector.dataGet(dataset);
 		File file = ds.getDataset("4350e421cdc16404033ef1812ea38c01");
 		Instances data = new Instances(new BufferedReader(new FileReader(file)));
 		data.setClassIndex(data.numAttributes() - 1);
-		List<Instances> split = WekaUtil.getStratifiedSplit(data, new Random(seed), 0.6f, 0.2f);
-		train = split.get(0);
-		Instances validate = split.get(1);
-		Instances test = split.get(2);
+
+		DatasetOrigin datasetOrigin = DatasetOrigin.OPENML_DATASET_ID;
+		String testEvaluationTechnique = "single";
+		String testSplitTechnique = "MCCV_0.7";
+		String valEvaluationTechnique = "multi";
+		String valSplitTechnique = "3MCCV_0.8";
+
+		SQLAdapter adapter = new SQLAdapter("<HOST>", "<USER>", "<PASSWORD>", "<DB>");
+		PipelineEvaluationCache cache = new PipelineEvaluationCache(String.valueOf(dataset), datasetOrigin,
+				testEvaluationTechnique, testSplitTechnique, seed, valSplitTechnique, valEvaluationTechnique, seed,
+				adapter);
+		ComponentLoader loader = new ComponentLoader(new File("conf/automl/searchmodels/weka/weka-all-autoweka.json"));
+		Collection<Component> components = loader.getComponents();
 
 		IGraphSearch<?, ?, TFDNode, String, Double, ?, ?> algorithm = null;
 		Double score = null;
-
-		// Load Haso Components for Weka
-		File configFile = new File("conf/automl/searchmodels/weka/weka-all-autoweka.json");
-		componentLoader = new ComponentLoader();
-		componentLoader.loadComponents(configFile);
-		components = componentLoader.getComponents();
-		pipelineFactory = new WEKAPipelineFactory();
 
 		// Get Graph generator
 		MLPlanWekaClassifier mlplan = new WekaMLPlanWekaClassifier();
@@ -75,7 +77,9 @@ public class AutoMLTest {
 		ISolutionEvaluator<TFDNode, Double> searchEvaluator = new ISolutionEvaluator<TFDNode, Double>() {
 			@Override
 			public Double evaluateSolution(List<TFDNode> solutionPath) throws Exception {
-				return calculateScore(solutionPath, validate);
+
+				return cache.getResultOrExecuteEvaluation(Util.getSolutionCompositionFromState(
+						loader.getComponents(), solutionPath.get(solutionPath.size() - 1).getState(), true));
 			}
 
 			@Override
@@ -119,41 +123,18 @@ public class AutoMLTest {
 		} catch (TimeoutException e) {
 			System.out.println("algorithm finished with timeout exception, which is ok.");
 		}
+		mlplan.cancel();
+		algorithm.cancel();
+		searchEvaluator.cancel();
+		nodeEvaluator.cancel();
+		adapter.close();
 		System.out.println("Evaluating best found pipeline");
 		try {
-			score = (algorithm.getBestSeenSolution() != null)
-					? calculateScore(algorithm.getBestSeenSolution().getNodes(), test)
-					: null;
+			score = (algorithm.getBestSeenSolution() != null) ? algorithm.getBestSeenSolution().getScore() : null;
 			System.out.println("Switch-Search: " + score);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 	}
-	
-	private static Double calculateScore (List<TFDNode> solutionPath, Instances data) throws Exception {
-		if (solutionPath != null && !solutionPath.isEmpty()) {
-			ComponentInstance instance = Util.getSolutionCompositionFromState(componentLoader.getComponents(),
-					solutionPath.get(solutionPath.size() - 1).getState(), true);
-			if (instance != null) {
-				MLPipeline pipeline = pipelineFactory
-						.getComponentInstantiation(Util.getSolutionCompositionFromState(components,
-								solutionPath.get(solutionPath.size() - 1).getState(), true));
-				pipeline.buildClassifier(train);
-				double[] prediction = pipeline.classifyInstances(data);
-				double errorCounter = 0d;
-				for (int i = 0; i < data.size(); i++) {
-					if (prediction[i] != data.get(i).classValue()) {
-						errorCounter++;
-					}
-				}
-				return errorCounter / data.size();
-			} else {
-				return Double.MAX_VALUE;
-			}
-		} else {
-			return Double.MAX_VALUE;
-		}
-	}
-
 }
