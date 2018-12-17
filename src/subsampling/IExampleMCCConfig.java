@@ -22,11 +22,15 @@ public interface IExampleMCCConfig extends IExperimentSetConfig {
 	public static final String DATASETS = "datasets";
 	public static final String SAMPLESIZES = "samplesizes";
 	public static final String ALGORITHMS = "algorithms";
+	public static final String MODELS = "MODELS";
 	public static final String SEEDS = "seeds";
 	public static final String datasetFolder = "datasetfolder";
 	
 	@Key(ALGORITHMS)
 	public List<String> getAlgorithms();
+	
+	@Key(MODELS)
+	public List<String> getModels();
 	
 	@Key(SEEDS)
 	public List<String> getSeeds();
