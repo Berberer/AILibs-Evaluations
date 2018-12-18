@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -15,16 +16,22 @@ import jaicore.experiments.ExperimentRunner;
 import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
+import jaicore.ml.WekaUtil;
 import jaicore.ml.core.dataset.IDataset;
 import jaicore.ml.core.dataset.IInstance;
 import jaicore.ml.core.dataset.sampling.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.GmeansSampling;
 import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
+import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.StratifiedSampling;
+import jaicore.ml.core.dataset.standard.SimpleDataset;
+import jaicore.ml.skikitwrapper.SkikitLearnWrapper;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.SMO;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
+import weka.core.Instance;
 import weka.core.Instances;
 
 public class SubsamplingExperimenter {
@@ -55,7 +62,7 @@ public class SubsamplingExperimenter {
 
 				// Used learning model
 				String learningModel = description.get("model");
-				
+
 				// Size of the sample as an percentage of the dataset
 				double percentage = Double.valueOf("0." + description.get("samplesize"));
 
@@ -63,15 +70,12 @@ public class SubsamplingExperimenter {
 				String datasetName = description.get("dataset");
 				Instances data = new Instances(new BufferedReader(
 						new FileReader(new File(m.getDatasetFolder() + File.separator + datasetName + ".arff"))));
-				// TODO: Create Dataset for instances.
-				IDataset<IInstance> dataset = null;
-				// TODO: Create stratisfied split of the dataset
-				IDataset<IInstance> train = null;
-				IDataset<IInstance> test = null;
+				SimpleDataset dataset = WekaInstancesUtil.wekaInstancesToDataset(data);
 
 				// Perform Subsampling
 				ASamplingAlgorithm samplingAlgorithm = null;
-				// TODO: Add subsampling with Systematic,LLC,OSMAC,AttributeStratified,AttributeStratifiedSTD,ClassStratified,ClassStratifiedSTD
+				// TODO: Add subsampling with
+				// LLC,OSMAC,AttributeStratified,AttributeStratifiedSTD,ClassStratified,ClassStratifiedSTD
 				switch (subsamplingMethod) {
 				case "SimpleRandom":
 					samplingAlgorithm = new SimpleRandomSampling(random);
@@ -87,11 +91,21 @@ public class SubsamplingExperimenter {
 					GMeansStratiAmountSelectorAndAssigner gSTD = new GMeansStratiAmountSelectorAndAssigner(seed);
 					samplingAlgorithm = new StratifiedSampling(gSTD, gSTD, random, true);
 					break;
+				case "Systematic":
+					samplingAlgorithm = new SystematicSampling(random);
+					break;
 				}
 				samplingAlgorithm.setInput(dataset);
 				samplingAlgorithm.setSampleSize((int) (dataset.size() * percentage));
 				IDataset<IInstance> subsampledDataset = samplingAlgorithm.call();
 
+				// Create stratisfied split of the dataset
+				Instances sampledInstanes = WekaInstancesUtil.datasetToWekaInstances(subsampledDataset);
+				List<Instances> splits = WekaUtil.getStratifiedSplit(sampledInstanes, seed, 0.7);
+				Instances train = splits.get(0);
+				Instances test = splits.get(1);
+
+				// Select the classifier and train it on the train split
 				Classifier classifier = null;
 				switch (learningModel) {
 				case "SVM":
@@ -100,13 +114,28 @@ public class SubsamplingExperimenter {
 				case "DecisionTree":
 					classifier = new J48();
 					break;
+				case "KNN1":
+					classifier = new IBk();
+					break;
+				case "KNN5":
+					classifier = new IBk(5);
+					break;
+				case "MLP":
+					classifier = new SkikitLearnWrapper("sklearn/neural_network/MLPClassifier", "", "");
+					break;
 				}
-				
-				// TODO: Training with train split
-				
-				// TODO: Calculation of Accuracy.
-				double score = 0.0d;
+				classifier.buildClassifier(train);
 
+				// Calculate accuracy on the test split
+				double errorCounter = 0d;
+				for (Instance instance : test) {
+					if (classifier.classifyInstance(instance) != instance.classValue()) {
+						errorCounter++;
+					}
+				}
+				double score = errorCounter / (double) test.size();
+
+				// Save the accuracy into the results hashmap
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
 				processor.processResults(results);
