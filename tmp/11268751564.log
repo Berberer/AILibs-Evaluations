@@ -1,9 +1,0 @@
-could not convert string to float: b'tested_negative'
-Traceback (most recent call last):
-  File "/home/lukas/Dev/AILibs-Evaluations/tmp/11268751564.py", line 160, in main
-    data = load_arff_file(arff_path)
-  File "/home/lukas/Dev/AILibs-Evaluations/tmp/11268751564.py", line 43, in load_arff_file
-    data = np.asarray(data.tolist(), dtype=np.float64)
-  File "/home/lukas/.local/lib/python3.7/site-packages/numpy/core/numeric.py", line 501, in asarray
-    return array(a, dtype, copy=False, order=order)
-ValueError: could not convert string to float: b'tested_negative'
