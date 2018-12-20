@@ -127,13 +127,13 @@ public class SubsamplingExperimenter {
 				classifier.buildClassifier(train);
 
 				// Calculate accuracy on the test split
-				double errorCounter = 0d;
+				double correctCounter = 0d;
 				for (Instance instance : test) {
-					if (classifier.classifyInstance(instance) != instance.classValue()) {
-						errorCounter++;
+					if (classifier.classifyInstance(instance) == instance.classValue()) {
+						correctCounter++;
 					}
 				}
-				double score = errorCounter / (double) test.size();
+				double score = correctCounter / (double) test.size();
 
 				// Save the accuracy into the results hashmap
 				Map<String, Object> results = new HashMap<>();
