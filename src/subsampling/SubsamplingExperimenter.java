@@ -18,7 +18,6 @@ import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.ml.WekaUtil;
 import jaicore.ml.core.dataset.IDataset;
-import jaicore.ml.core.dataset.IInstance;
 import jaicore.ml.core.dataset.sampling.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.GmeansSampling;
 import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
@@ -26,6 +25,7 @@ import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.StratifiedSampling;
 import jaicore.ml.core.dataset.standard.SimpleDataset;
+import jaicore.ml.core.dataset.standard.SimpleInstance;
 import jaicore.ml.skikitwrapper.SkikitLearnWrapper;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.SMO;
@@ -70,40 +70,37 @@ public class SubsamplingExperimenter {
 				String datasetName = description.get("dataset");
 				Instances data = new Instances(new BufferedReader(
 						new FileReader(new File(m.getDatasetFolder() + File.separator + datasetName + ".arff"))));
-				SimpleDataset dataset = WekaInstancesUtil.wekaInstancesToDataset(data);
-
-				// Perform Subsampling
-				ASamplingAlgorithm samplingAlgorithm = null;
-				// TODO: Add subsampling with
-				// LLC,OSMAC,AttributeStratified,AttributeStratifiedSTD,ClassStratified,ClassStratifiedSTD
-				switch (subsamplingMethod) {
-				case "SimpleRandom":
-					samplingAlgorithm = new SimpleRandomSampling(random);
-					break;
-				case "ClusterGMeans":
-					samplingAlgorithm = new GmeansSampling(seed);
-					break;
-				case "GMeansStratified":
-					GMeansStratiAmountSelectorAndAssigner g = new GMeansStratiAmountSelectorAndAssigner(seed);
-					samplingAlgorithm = new StratifiedSampling(g, g, random, false);
-					break;
-				case "GMeansStratifiedSTD":
-					GMeansStratiAmountSelectorAndAssigner gSTD = new GMeansStratiAmountSelectorAndAssigner(seed);
-					samplingAlgorithm = new StratifiedSampling(gSTD, gSTD, random, true);
-					break;
-				case "Systematic":
-					samplingAlgorithm = new SystematicSampling(random);
-					break;
-				}
-				samplingAlgorithm.setInput(dataset);
-				samplingAlgorithm.setSampleSize((int) (dataset.size() * percentage));
-				IDataset<IInstance> subsampledDataset = samplingAlgorithm.call();
-
-				// Create stratisfied split of the dataset
-				Instances sampledInstanes = WekaInstancesUtil.datasetToWekaInstances(subsampledDataset);
-				List<Instances> splits = WekaUtil.getStratifiedSplit(sampledInstanes, seed, 0.7);
+				List<Instances> splits = WekaUtil.getStratifiedSplit(data, seed, 0.8);
 				Instances train = splits.get(0);
 				Instances test = splits.get(1);
+				SimpleDataset datasetTrain = WekaInstancesUtil.wekaInstancesToDataset(train);
+
+				// Perform Subsampling
+				ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
+				GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(seed);
+				// TODO: Add subsampling with
+				// LLC,OSMAC,AttributeStratified,ClassStratified
+				switch (subsamplingMethod) {
+				case "SimpleRandom":
+					samplingAlgorithm = new SimpleRandomSampling<>(random);
+					break;
+				case "ClusterGMeans":
+					samplingAlgorithm = new GmeansSampling<>(seed);
+					break;
+				case "GMeansStratified":
+					samplingAlgorithm = new StratifiedSampling<>(g, g, random);
+					break;
+				case "Systematic":
+					samplingAlgorithm = new SystematicSampling<>(random);
+					break;
+				}
+				samplingAlgorithm.setInput(datasetTrain);
+				samplingAlgorithm.setSampleSize((int) (datasetTrain.size() * percentage));
+				IDataset<SimpleInstance> subsampledDatasetTrain = samplingAlgorithm.call();
+
+				// Create stratified split of the dataset
+				Instances sampledInstanesTrain = WekaInstancesUtil.datasetToWekaInstances(subsampledDatasetTrain);
+
 
 				// Select the classifier and train it on the train split
 				Classifier classifier = null;
@@ -124,7 +121,7 @@ public class SubsamplingExperimenter {
 					classifier = new SkikitLearnWrapper("sklearn/neural_network/MLPClassifier", "", "");
 					break;
 				}
-				classifier.buildClassifier(train);
+				classifier.buildClassifier(sampledInstanesTrain);
 
 				// Calculate accuracy on the test split
 				double correctCounter = 0d;
