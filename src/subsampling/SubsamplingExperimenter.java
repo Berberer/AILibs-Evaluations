@@ -26,6 +26,7 @@ import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSe
 import jaicore.ml.core.dataset.sampling.stratified.sampling.StratifiedSampling;
 import jaicore.ml.core.dataset.standard.SimpleDataset;
 import jaicore.ml.core.dataset.standard.SimpleInstance;
+import jaicore.ml.core.dataset.weka.WekaInstancesUtil;
 import jaicore.ml.skikitwrapper.SkikitLearnWrapper;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.SMO;
