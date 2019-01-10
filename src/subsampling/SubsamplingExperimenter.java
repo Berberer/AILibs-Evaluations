@@ -3,6 +3,7 @@ package subsampling;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,13 @@ import jaicore.ml.core.dataset.sampling.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.GmeansSampling;
 import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
 import jaicore.ml.core.dataset.sampling.SystematicSampling;
+import jaicore.ml.core.dataset.sampling.stratified.sampling.AttributeBasedStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.StratifiedSampling;
 import jaicore.ml.core.dataset.standard.SimpleDataset;
 import jaicore.ml.core.dataset.standard.SimpleInstance;
 import jaicore.ml.core.dataset.weka.WekaInstancesUtil;
-import jaicore.ml.skikitwrapper.SkikitLearnWrapper;
+import jaicore.ml.scikitwrapper.ScikitLearnWrapper;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.SMO;
 import weka.classifiers.lazy.IBk;
@@ -78,7 +80,8 @@ public class SubsamplingExperimenter {
 
 				// Perform Subsampling
 				ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
-				GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(seed);
+				GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(
+						seed);
 				// TODO: Add subsampling with
 				// LLC,OSMAC,AttributeStratified,ClassStratified
 				switch (subsamplingMethod) {
@@ -94,14 +97,20 @@ public class SubsamplingExperimenter {
 				case "Systematic":
 					samplingAlgorithm = new SystematicSampling<>(random);
 					break;
+				case "AttributeStratified":
+					List<Integer> attributeIndices = new ArrayList<>();
+					attributeIndices.add(datasetTrain.getNumberOfAttributes());
+					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>(
+							attributeIndices);
+					samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
+					break;
 				}
 				samplingAlgorithm.setInput(datasetTrain);
 				samplingAlgorithm.setSampleSize((int) (datasetTrain.size() * percentage));
 				IDataset<SimpleInstance> subsampledDatasetTrain = samplingAlgorithm.call();
 
 				// Create stratified split of the dataset
-				Instances sampledInstanesTrain = WekaInstancesUtil.datasetToWekaInstances(subsampledDatasetTrain);
-
+				Instances sampledInstancesTrain = WekaInstancesUtil.datasetToWekaInstances(subsampledDatasetTrain);
 
 				// Select the classifier and train it on the train split
 				Classifier classifier = null;
@@ -119,10 +128,11 @@ public class SubsamplingExperimenter {
 					classifier = new IBk(5);
 					break;
 				case "MLP":
-					classifier = new SkikitLearnWrapper("sklearn/neural_network/MLPClassifier", "", "");
+					classifier = new ScikitLearnWrapper("MLPClassifier()",
+							"from sklearn.neural_network import MLPClassifier");
 					break;
 				}
-				classifier.buildClassifier(sampledInstanesTrain);
+				classifier.buildClassifier(sampledInstancesTrain);
 
 				// Calculate accuracy on the test split
 				double correctCounter = 0d;
