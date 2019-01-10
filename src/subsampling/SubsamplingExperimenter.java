@@ -103,13 +103,6 @@ public class SubsamplingExperimenter {
 				case "Systematic":
 					samplingAlgorithm = new SystematicSampling<>(random);
 					break;
-				case "AttributeStratified":
-					List<Integer> attributeIndices = new ArrayList<>();
-					attributeIndices.add(datasetTrain.getNumberOfAttributes());
-					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>(
-							attributeIndices);
-					samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
-					break;
 				}
 				samplingAlgorithm.setInput(datasetTrain);
 				samplingAlgorithm.setSampleSize((int) (datasetTrain.size() * percentage));

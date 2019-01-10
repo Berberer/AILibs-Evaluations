@@ -54,7 +54,7 @@ public class SubsamplingTester {
 		ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
 		GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(seed);
 		// TODO: Add subsampling with
-		// LLC,OSMAC
+		// LLC,OSMAC,AttributeStratified,ClassStratified
 		switch (subsamplingMethod) {
 		case "SimpleRandom":
 			samplingAlgorithm = new SimpleRandomSampling<>(random);
@@ -67,13 +67,6 @@ public class SubsamplingTester {
 			break;
 		case "Systematic":
 			samplingAlgorithm = new SystematicSampling<>(random);
-			break;
-		case "AttributeStratified":
-			List<Integer> attributeIndices = new ArrayList<>();
-			attributeIndices.add(datasetTrain.getNumberOfAttributes());
-			AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>(
-					attributeIndices);
-			samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
 			break;
 		}
 		samplingAlgorithm.setInput(datasetTrain);
