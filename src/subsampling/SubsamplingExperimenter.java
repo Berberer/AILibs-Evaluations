@@ -67,7 +67,13 @@ public class SubsamplingExperimenter {
 				String learningModel = description.get("model");
 
 				// Size of the sample as an percentage of the dataset
-				double percentage = Double.valueOf("0." + description.get("samplesize"));
+				String sampleSize = description.get("samplesize");
+				double percentage;
+				if (sampleSize.equals("100")) {
+					percentage = 1.0d;
+				} else {
+					percentage = Double.valueOf("0." + description.get("samplesize"));
+				}
 
 				// Used dataset
 				String datasetName = description.get("dataset");
