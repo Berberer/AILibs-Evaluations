@@ -1,0 +1,6 @@
+db.host = isys-db.cs.upb.de
+db.ssl = true
+db.username = <USERNAME>
+db.password = <PASSWORD>
+db.database = <DB>
+db.table = subsampling_results

@@ -40,7 +40,7 @@ import weka.core.Instances;
 public class SubsamplingExperimenter {
 
 	public static void main(String[] args) {
-		IExampleMCCConfig m = ConfigCache.getOrCreate(IExampleMCCConfig.class);
+		ISubsamplingConfig m = ConfigCache.getOrCreate(ISubsamplingConfig.class);
 
 		ExperimentRunner runner = new ExperimentRunner(new IExperimentSetEvaluator() {
 

@@ -3,6 +3,8 @@ package subsampling;
 import java.io.File;
 import java.util.List;
 
+import org.aeonbits.owner.Config.LoadPolicy;
+import org.aeonbits.owner.Config.LoadType;
 import org.aeonbits.owner.Config.Sources;
 
 import jaicore.experiments.IExperimentSetConfig;
@@ -17,8 +19,9 @@ import jaicore.experiments.IExperimentSetConfig;
  * @author fmohr
  *
  */
-@Sources({ "file:./setup.properties" })
-public interface IExampleMCCConfig extends IExperimentSetConfig {
+@Sources({ "file:./setup.properties", "file:./database.properties"})
+@LoadPolicy(LoadType.MERGE)
+public interface ISubsamplingConfig extends IExperimentSetConfig {
 	public static final String DATASETS = "datasets";
 	public static final String SAMPLESIZES = "samplesizes";
 	public static final String ALGORITHMS = "algorithms";
