@@ -93,7 +93,6 @@ public class SubsamplingExperimenter {
 				ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
 				GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(
 						seed);
-				// TODO: Add subsampling with AttributeStratified
 				switch (subsamplingMethod) {
 				case "SimpleRandom":
 					samplingAlgorithm = new SimpleRandomSampling<>(random);
@@ -103,6 +102,12 @@ public class SubsamplingExperimenter {
 					break;
 				case "GMeansStratified":
 					samplingAlgorithm = new StratifiedSampling<>(g, g, random);
+					break;
+				case "ClusterKMeans":
+					// TODO: Add creation of K Means clustering sampling
+					break;
+				case "AttributeStratified":
+					// TODO: Add creation of sampling from attribute strati
 					break;
 				case "Systematic":
 					samplingAlgorithm = new SystematicSampling<>(random);
