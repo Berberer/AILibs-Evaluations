@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.lang.time.StopWatch;
+
 import jaicore.ml.WekaUtil;
 import jaicore.ml.cache.ReproducibleInstances;
 import jaicore.ml.core.dataset.IDataset;
@@ -35,19 +37,15 @@ import weka.core.Instances;
 public class SubsamplingTester {
 
 	public static void main(String[] args) throws Exception {
-
 		// Random Seed
 		int seed = 123;
 		Random random = new Random(seed);
 
 		// Used subsampling method
-		String subsamplingMethod = "SimpleRandom";
+		String subsamplingMethod = "Systematic";
 
 		// Used learning model
-		String learningModel = "DecisionTree";
-
-		// Size of the sample as an percentage of the dataset
-		double percentage = Double.valueOf("0." + "01");
+		String learningModel = "SVM";				
 
 		// Used dataset
 		Instances data = ReproducibleInstances.fromOpenML("1525", "4350e421cdc16404033ef1812ea38c01");
@@ -55,11 +53,28 @@ public class SubsamplingTester {
 		Instances train = splits.get(0);
 		Instances test = splits.get(1);
 		SimpleDataset datasetTrain = WekaInstancesUtil.wekaInstancesToDataset(train);
-		System.out.println("Train Size: " + datasetTrain.size());
-
+		System.out.println("TRAIN SIZE: " + datasetTrain.size());
+		
+		// Size of the sample
+		String sampleSizeString = "25p";
+		int sampleSize;
+		if (sampleSizeString.contains("p")) {
+			sampleSizeString = sampleSizeString.replace("p", "");
+			double percentage;
+			if (sampleSizeString.equals("100")) {
+				percentage = 1.0d;
+			} else {
+				percentage = Double.valueOf("0." + sampleSizeString);
+			}
+			sampleSize = (int) (datasetTrain.size() * percentage);
+		} else {
+			sampleSize = Integer.valueOf(sampleSizeString);
+		}
+		
 		// Perform Subsampling
 		ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
-		GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(seed);
+		GMeansStratiAmountSelectorAndAssigner<SimpleInstance> g = new GMeansStratiAmountSelectorAndAssigner<>(
+				seed);
 		switch (subsamplingMethod) {
 		case "SimpleRandom":
 			samplingAlgorithm = new SimpleRandomSampling<>(random);
@@ -139,9 +154,16 @@ public class SubsamplingTester {
 			break;
 		}
 		samplingAlgorithm.setInput(datasetTrain);
-		samplingAlgorithm.setSampleSize((int) (datasetTrain.size() * percentage));
+		samplingAlgorithm.setSampleSize(sampleSize);
+		
+
+		// Create Stopwatch for time measurements of sampling
+		StopWatch stopWatch = new StopWatch();
+		stopWatch.start();
 		IDataset<SimpleInstance> subsampledDatasetTrain = samplingAlgorithm.call();
-		System.out.println("Subsample size: " + subsampledDatasetTrain.size());
+		stopWatch.stop();
+		long samplingTime = stopWatch.getTime();
+		System.out.println("SAMPLE SIZE: " + subsampledDatasetTrain.size());
 
 		// Create stratified split of the dataset
 		Instances sampledInstancesTrain = WekaInstancesUtil.datasetToWekaInstances(subsampledDatasetTrain);
@@ -162,10 +184,17 @@ public class SubsamplingTester {
 			classifier = new IBk(5);
 			break;
 		case "MLP":
-			classifier = new ScikitLearnWrapper("MLPClassifier()", "from sklearn.neural_network import MLPClassifier");
+			classifier = new ScikitLearnWrapper("MLPClassifier()",
+					"from sklearn.neural_network import MLPClassifier");
 			break;
 		}
+		
+		// Train classifier and measure time
+		stopWatch.reset();
+		stopWatch.start();
 		classifier.buildClassifier(sampledInstancesTrain);
+		stopWatch.stop();
+		long trainingTime = stopWatch.getTime();
 
 		// Calculate accuracy on the test split
 		double correctCounter = 0d;
@@ -177,7 +206,8 @@ public class SubsamplingTester {
 		double score = correctCounter / (double) test.size();
 
 		System.out.println("FINAL SCORE: " + score);
-
+		System.out.println("SAMPLING TIME: " + samplingTime);
+		System.out.println("TRAINING TIME: " + trainingTime);
 	}
 
 }

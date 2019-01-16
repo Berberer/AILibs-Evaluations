@@ -11,6 +11,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.aeonbits.owner.ConfigCache;
+import org.apache.commons.lang.time.StopWatch;
 
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
@@ -71,15 +72,6 @@ public class SubsamplingExperimenter {
 				// Used learning model
 				String learningModel = description.get("model");
 
-				// Size of the sample as an percentage of the dataset
-				String sampleSize = description.get("samplesize");
-				double percentage;
-				if (sampleSize.equals("100")) {
-					percentage = 1.0d;
-				} else {
-					percentage = Double.valueOf("0." + description.get("samplesize"));
-				}
-
 				// Used dataset
 				String datasetName = description.get("dataset");
 				Instances data = new Instances(new BufferedReader(
@@ -88,6 +80,22 @@ public class SubsamplingExperimenter {
 				Instances train = splits.get(0);
 				Instances test = splits.get(1);
 				SimpleDataset datasetTrain = WekaInstancesUtil.wekaInstancesToDataset(train);
+
+				// Size of the sample
+				String sampleSizeString = description.get("samplesize");
+				int sampleSize;
+				if (sampleSizeString.contains("p")) {
+					sampleSizeString = sampleSizeString.replace("p", "");
+					double percentage;
+					if (sampleSizeString.equals("100")) {
+						percentage = 1.0d;
+					} else {
+						percentage = Double.valueOf("0." + sampleSizeString);
+					}
+					sampleSize = (int) (datasetTrain.size() * percentage);
+				} else {
+					sampleSize = Integer.valueOf(sampleSizeString);
+				}
 
 				// Perform Subsampling
 				ASamplingAlgorithm<SimpleInstance> samplingAlgorithm = null;
@@ -172,8 +180,14 @@ public class SubsamplingExperimenter {
 					break;
 				}
 				samplingAlgorithm.setInput(datasetTrain);
-				samplingAlgorithm.setSampleSize((int) (datasetTrain.size() * percentage));
+				samplingAlgorithm.setSampleSize(sampleSize);
+
+				// Create Stopwatch for time measurements of sampling
+				StopWatch stopWatch = new StopWatch();
+				stopWatch.start();
 				IDataset<SimpleInstance> subsampledDatasetTrain = samplingAlgorithm.call();
+				stopWatch.stop();
+				long samplingTime = stopWatch.getTime();
 
 				// Create stratified split of the dataset
 				Instances sampledInstancesTrain = WekaInstancesUtil.datasetToWekaInstances(subsampledDatasetTrain);
@@ -198,7 +212,13 @@ public class SubsamplingExperimenter {
 							"from sklearn.neural_network import MLPClassifier");
 					break;
 				}
+
+				// Train classifier and measure time
+				stopWatch.reset();
+				stopWatch.start();
 				classifier.buildClassifier(sampledInstancesTrain);
+				stopWatch.stop();
+				long trainingTime = stopWatch.getTime();
 
 				// Calculate accuracy on the test split
 				double correctCounter = 0d;
@@ -212,6 +232,8 @@ public class SubsamplingExperimenter {
 				// Save the accuracy into the results hashmap
 				Map<String, Object> results = new HashMap<>();
 				results.put("score", score);
+				results.put("samplingTime", samplingTime);
+				results.put("trainingTime", trainingTime);
 				processor.processResults(results);
 			}
 		});
