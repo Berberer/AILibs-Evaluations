@@ -76,6 +76,7 @@ public class SubsamplingExperimenter {
 				String datasetName = description.get("dataset");
 				Instances data = new Instances(new BufferedReader(
 						new FileReader(new File(m.getDatasetFolder() + File.separator + datasetName + ".arff"))));
+				data.setClassIndex(data.numAttributes() - 1);
 				List<Instances> splits = WekaUtil.getStratifiedSplit(data, seed, 0.8);
 				Instances train = splits.get(0);
 				Instances test = splits.get(1);

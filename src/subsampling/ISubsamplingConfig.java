@@ -25,7 +25,7 @@ public interface ISubsamplingConfig extends IExperimentSetConfig {
 	public static final String DATASETS = "datasets";
 	public static final String SAMPLESIZES = "samplesizes";
 	public static final String ALGORITHMS = "algorithms";
-	public static final String MODELS = "MODELS";
+	public static final String MODELS = "models";
 	public static final String SEEDS = "seeds";
 	public static final String datasetFolder = "datasetfolder";
 	
