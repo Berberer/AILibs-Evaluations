@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.aeonbits.owner.ConfigCache;
 import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.math3.ml.distance.ManhattanDistance;
 
 import jaicore.basic.SQLAdapter;
 import jaicore.experiments.ExperimentDBEntry;
@@ -24,6 +25,7 @@ import jaicore.ml.core.dataset.IDataset;
 import jaicore.ml.core.dataset.IInstance;
 import jaicore.ml.core.dataset.sampling.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.GmeansSampling;
+import jaicore.ml.core.dataset.sampling.KmeansSampling;
 import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
 import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.LocalCaseControlSampling;
@@ -113,7 +115,7 @@ public class SubsamplingExperimenter {
 					samplingAlgorithm = new StratifiedSampling<>(g, g, random);
 					break;
 				case "ClusterKMeans":
-					// TODO: Add creation of K Means clustering sampling
+					samplingAlgorithm = new KmeansSampling<SimpleInstance>(seed, new ManhattanDistance());
 					break;
 				case "AttributeStratified":
 					// TODO: Add creation of sampling from attribute strati

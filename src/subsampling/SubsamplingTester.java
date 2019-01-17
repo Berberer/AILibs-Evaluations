@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.math3.ml.distance.ManhattanDistance;
 
 import jaicore.ml.WekaUtil;
 import jaicore.ml.cache.ReproducibleInstances;
@@ -15,6 +16,7 @@ import jaicore.ml.core.dataset.IDataset;
 import jaicore.ml.core.dataset.IInstance;
 import jaicore.ml.core.dataset.sampling.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.GmeansSampling;
+import jaicore.ml.core.dataset.sampling.KmeansSampling;
 import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
 import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.LocalCaseControlSampling;
@@ -42,7 +44,7 @@ public class SubsamplingTester {
 		Random random = new Random(seed);
 
 		// Used subsampling method
-		String subsamplingMethod = "Systematic";
+		String subsamplingMethod = "ClusterKMeans";
 
 		// Used learning model
 		String learningModel = "SVM";				
@@ -86,7 +88,7 @@ public class SubsamplingTester {
 			samplingAlgorithm = new StratifiedSampling<>(g, g, random);
 			break;
 		case "ClusterKMeans":
-			// TODO: Add creation of K Means clustering sampling
+			samplingAlgorithm = new KmeansSampling<SimpleInstance>(seed, new ManhattanDistance());
 			break;
 		case "AttributeStratified":
 			// TODO: Add creation of sampling from attribute strati
