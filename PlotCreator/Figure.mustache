@@ -1,0 +1,13 @@
+\begin{tikzpicture}
+  \begin{axis}[
+    title={{title}},
+    width=\linewidth,
+    x tick label style={rotate=45,anchor=east},
+    legend style={at={(0.5,-0.2)},anchor=north}
+  ]
+  {{#points}}
+  \addplot coordinates { {{#data}} ({{samplesize}},{{score}}) {{/data}} };
+  \addlegendentry{ {{algorithm}} };
+  {{/points}}
+  \end{axis}
+\end{tikzpicture}
