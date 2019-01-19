@@ -1,3 +1,5 @@
+const Mustache = require('mustache');
+const fs = require('fs');
 const resultsFetcher = require('./ResultFetcher.js');
 const plotCreator = require('./PlotCreator.js');
 
@@ -46,11 +48,21 @@ plotCreator
       }
     }
     Promise.all(plotPromises).then(plots => {
+      const figures = {};
       for (let plot of plots) {
-        console.log(`${plot.model} on ${plot.dataset}:`);
-        console.log(plot.figure);
-        console.log('\n*****************************************\n');
+        figures[`${plot.model}_${plot.dataset}`] = plot.figure;
       }
+      fs.readFile('Table.mustache', 'utf8', (err, data) => {
+        if (err) {
+          console.log('Table template read error');
+          console.log(err);
+        } else {
+          let table = Mustache.render(data, figures);
+          table = table.replace(/&#x3D;/g, '=');
+          table = table.replace(/&#x2F;/g, '/');
+          console.log(table);
+        }
+      });
     });
   })
   .catch(err => {
