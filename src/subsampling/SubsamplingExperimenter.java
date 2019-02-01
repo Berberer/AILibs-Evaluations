@@ -30,6 +30,7 @@ import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
 import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.LocalCaseControlSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.OSMAC;
+import jaicore.ml.core.dataset.sampling.stratified.sampling.AttributeBasedStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.IStratiAmountSelector;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.IStratiAssigner;
@@ -118,12 +119,13 @@ public class SubsamplingExperimenter {
 					samplingAlgorithm = new KmeansSampling<SimpleInstance>(seed, new ManhattanDistance());
 					break;
 				case "AttributeStratified":
-					// TODO: Add creation of sampling from attribute strati
+					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>();
+					samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
 					break;
 				case "Systematic":
 					samplingAlgorithm = new SystematicSampling<>(random);
 					break;
-				case "LLC":
+				case "LCC":
 					samplingAlgorithm = new LocalCaseControlSampling<>(random,
 							(int) (0.01d * (double) datasetTrain.size()));
 					break;
@@ -237,6 +239,7 @@ public class SubsamplingExperimenter {
 				results.put("score", score);
 				results.put("samplingTime", samplingTime);
 				results.put("trainingTime", trainingTime);
+				results.put("achievedSampleSize", subsampledDatasetTrain.size());
 				processor.processResults(results);
 			}
 		});

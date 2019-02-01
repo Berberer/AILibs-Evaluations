@@ -21,6 +21,7 @@ import jaicore.ml.core.dataset.sampling.SimpleRandomSampling;
 import jaicore.ml.core.dataset.sampling.SystematicSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.LocalCaseControlSampling;
 import jaicore.ml.core.dataset.sampling.casecontrol.OSMAC;
+import jaicore.ml.core.dataset.sampling.stratified.sampling.AttributeBasedStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.GMeansStratiAmountSelectorAndAssigner;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.IStratiAmountSelector;
 import jaicore.ml.core.dataset.sampling.stratified.sampling.IStratiAssigner;
@@ -44,7 +45,7 @@ public class SubsamplingTester {
 		Random random = new Random(seed);
 
 		// Used subsampling method
-		String subsamplingMethod = "ClusterKMeans";
+		String subsamplingMethod = "AttributeStratified";
 
 		// Used learning model
 		String learningModel = "SVM";				
@@ -91,7 +92,8 @@ public class SubsamplingTester {
 			samplingAlgorithm = new KmeansSampling<SimpleInstance>(seed, new ManhattanDistance());
 			break;
 		case "AttributeStratified":
-			// TODO: Add creation of sampling from attribute strati
+			AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>();
+			samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
 			break;
 		case "Systematic":
 			samplingAlgorithm = new SystematicSampling<>(random);
