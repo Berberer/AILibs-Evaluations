@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -119,8 +120,16 @@ public class SubsamplingExperimenter {
 					samplingAlgorithm = new KmeansSampling<SimpleInstance>(seed, new ManhattanDistance());
 					break;
 				case "AttributeStratified":
-					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> a = new AttributeBasedStratiAmountSelectorAndAssigner<>();
-					samplingAlgorithm = new StratifiedSampling<SimpleInstance>(a, a, random);
+					List<Integer> indices = new LinkedList<>();
+					while (indices.size() < 2) {
+						int index = random.nextInt(datasetTrain.getNumberOfAttributes());
+						if (!indices.contains(index)) {
+							indices.add(index);
+						}
+					}
+					System.out.println(indices);
+					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> aAttribute = new AttributeBasedStratiAmountSelectorAndAssigner<>(indices);
+					samplingAlgorithm = new StratifiedSampling<>(aAttribute, aAttribute, random);
 					break;
 				case "Systematic":
 					samplingAlgorithm = new SystematicSampling<>(random);
@@ -133,55 +142,8 @@ public class SubsamplingExperimenter {
 					samplingAlgorithm = new OSMAC<>(random, (int) (0.01d * (double) datasetTrain.size()));
 					break;
 				case "ClassStratified":
-					samplingAlgorithm = new StratifiedSampling<>(new IStratiAmountSelector<SimpleInstance>() {
-						@Override
-						public int selectStratiAmount(IDataset<SimpleInstance> ds) {
-							Set<Object> classes = new HashSet<>();
-							for (SimpleInstance instance : ds) {
-								Object y = instance.getTargetValue(new Object().getClass()).getValue();
-								if (!classes.contains(y)) {
-									classes.add(y);
-								}
-							}
-							return classes.size();
-						}
-
-						@Override
-						public void setNumCPUs(int numberOfCPUs) {
-						}
-
-						@Override
-						public int getNumCPUs() {
-							return 0;
-						}
-					}, new IStratiAssigner<SimpleInstance>() {
-
-						private Map<Object, Integer> classIndices = new HashMap<>();
-						private int i = 0;
-
-						@Override
-						public void init(IDataset<SimpleInstance> dataset, int stratiAmount) {
-						}
-
-						@Override
-						public int assignToStrati(IInstance datapoint) {
-							Object y = datapoint.getTargetValue(new Object().getClass()).getValue();
-							if (!classIndices.containsKey(y)) {
-								classIndices.put(y, i);
-								i++;
-							}
-							return classIndices.get(y);
-						}
-
-						@Override
-						public void setNumCPUs(int numberOfCPUs) {
-						}
-
-						@Override
-						public int getNumCPUs() {
-							return 0;
-						}
-					}, random);
+					AttributeBasedStratiAmountSelectorAndAssigner<SimpleInstance> aClass = new AttributeBasedStratiAmountSelectorAndAssigner<>();
+					samplingAlgorithm = new StratifiedSampling<SimpleInstance>(aClass, aClass, random);
 					break;
 				}
 				samplingAlgorithm.setInput(datasetTrain);
