@@ -6,7 +6,7 @@
     xticklabels={,,}
   ]
   {{#points}}
-  \addplot coordinates { {{#data}} ({{samplesize}},{{score}}) {{/data}} };
+  \addplot[mark=none, {{color}}] coordinates { {{#data}} ({{samplesize}},{{score}}) {{/data}} };
   {{/points}}
   \end{axis}
 \end{tikzpicture}

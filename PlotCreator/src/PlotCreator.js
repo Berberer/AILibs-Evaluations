@@ -24,6 +24,18 @@ const datasetSizes = {
   cifar10: 60000
 };
 
+const colors = {
+  SimpleRandom: 'red',
+  Systematic: 'orange',
+  ClusterGMeans: 'brown',
+  ClusterKMeans: 'lightgray',
+  LLC: 'lime',
+  OSMAC: 'green',
+  GMeansStratified: 'pink',
+  ClassStratified: 'blue',
+  AttributeStratified: 'cyan'
+};
+
 function createPlot(dataset, model, data) {
   const points = [];
   for (let algorithm of data) {
@@ -57,6 +69,7 @@ function createPlot(dataset, model, data) {
       });
       points.push({
         algorithm: algorithm.algorithm,
+        color: colors[algorithm.algorithm],
         data: algorithmResults
       });
     }
