@@ -9,16 +9,6 @@ import org.aeonbits.owner.Config.Sources;
 
 import jaicore.experiments.IExperimentSetConfig;
 
-/**
- * In fact, this config is an exact copy of IMultiClassClassificationExperimentConfig,
- * which cannot be used here to avoid cyclic dependencies.
- * Typically, in this case, you just would extend IMultiClassClassificationExperimentConfig
- * and leave the interface (mostly) empty except that you define the URL for the file.
- * 
- * 
- * @author fmohr
- *
- */
 @Sources({ "file:./setup.properties", "file:./database.properties"})
 @LoadPolicy(LoadType.MERGE)
 public interface ISubsamplingConfig extends IExperimentSetConfig {
