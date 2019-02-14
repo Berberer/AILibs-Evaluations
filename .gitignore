@@ -11,3 +11,4 @@
 out/
 tmp/
 node_modules/
+model_dumps/

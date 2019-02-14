@@ -17,9 +17,9 @@ public class SaturationPointTester {
 
 		// Setup
 		String algorithm = "SimpleRandom";
-		String model = "SVM";
+		String model = "KNN1";
 		String dataset = "har";
-		double epsilon = 0.01d;
+		double epsilon = 0.00025d;
 		int datasetSize = 0;
 		switch (dataset) {
 		case "har":
@@ -41,8 +41,7 @@ public class SaturationPointTester {
 				+ "FROM subsampling_results_with_sample_sizes WHERE dataset = '" + dataset + "' AND " + "model = '"
 				+ model + "' AND algorithm = '" + algorithm + "' AND score IS NOT NULL "
 				+ "GROUP BY achievedSampleSize ORDER BY CAST(achievedSampleSize AS unsigned) ASC";
-		SQLAdapter adapter = new SQLAdapter("isys-db.cs.upb.de", "pgotfml", "automl2018",
-				"pgotfml_subsampling", true);
+		SQLAdapter adapter = new SQLAdapter("isys-db.cs.upb.de", "pgotfml", "automl2018", "pgotfml_subsampling", true);
 		ResultSet rs = adapter.getResultsOfQuery(query);
 		Map<Double, Double> points = new HashMap<Double, Double>();
 		WeightedObservedPoints weightedObservedPoints = new WeightedObservedPoints();
@@ -59,23 +58,24 @@ public class SaturationPointTester {
 		System.out.println("TRUE CURVE: " + fittedCurve);
 
 		// Extrapolate saturation point
-//		LearningCurveExtrapolationMethod extrapolationMethod = new InversePowerLawExtrapolator();
-//		int[] selectedAnchorpointsX = new int[] { 8, 16, 64, 128 };
-//		double[] selectedAnchorpointsY = new double[] { points.get(8.0d), points.get(16.0d), points.get(64.0d),
-//				points.get(128.0d) };
-//		LearningCurve extrapolatedCurve = extrapolationMethod
-//				.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY);
+		LearningCurveExtrapolationMethod extrapolationMethod = new InversePowerLawExtrapolator();
+		int[] selectedAnchorpointsX = new int[] { 8, 16, 64, 128 };
+		double[] selectedAnchorpointsY = new double[] { points.get(8.0d), points.get(16.0d), points.get(64.0d),
+				points.get(128.0d) };
+		LearningCurve extrapolatedCurve = extrapolationMethod
+				.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY);
+		System.out.println("EXTRAPOLATED CURVE: " + extrapolatedCurve);
 
 		// Print results
-		double trueSaturationPoint = fittedCurve.getSaturationPoint(epsilon);
-//		double extrapolatedSaturationPoint = extrapolatedCurve.getSaturationPoint(epsilon);
-//		double absoluteDifference = Math.abs(trueSaturationPoint - trueSaturationPoint);
-//		double relativeDifference = absoluteDifference / ((double) datasetSize);
+		int trueSaturationPoint = (int) fittedCurve.getSaturationPoint(epsilon);
+		int extrapolatedSaturationPoint = (int) extrapolatedCurve.getSaturationPoint(epsilon);
+		int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
+		double relativeDifference = ((double) absoluteDifference) / ((double) datasetSize);
 
 		System.out.println("TRUE SATURATION POINT: " + trueSaturationPoint);
-//		System.out.println("EXTRAPOLATED SATURATION POINT: " + extrapolatedSaturationPoint);
-//		System.out.println("ABSOLUTE DIFFERENCE: " + absoluteDifference);
-//		System.out.println("RELATIVE DIFFERENCE: " + relativeDifference);
+		System.out.println("EXTRAPOLATED SATURATION POINT: " + extrapolatedSaturationPoint);
+		System.out.println("ABSOLUTE DIFFERENCE: " + absoluteDifference);
+		System.out.println("RELATIVE DIFFERENCE: " + relativeDifference);
 		adapter.close();
 	}
 }

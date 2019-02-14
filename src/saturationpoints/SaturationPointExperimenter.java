@@ -39,7 +39,7 @@ public class SaturationPointExperimenter {
 				String dataset = description.get("dataset");
 				String model = description.get("model");
 				String algorithm = description.get("algorithm");
-				double epsilon = 0.01d;
+				double epsilon = 0.00025d;
 				int datasetSize = 0;
 				switch (dataset) {
 				case "har":
@@ -83,10 +83,11 @@ public class SaturationPointExperimenter {
 						.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY);
 
 				// Submit results
-				double trueSaturationPoint = fittedCurve.getSaturationPoint(epsilon);
-				double extrapolatedSaturationPoint = extrapolatedCurve.getSaturationPoint(epsilon);
-				double absoluteDifference = Math.abs(trueSaturationPoint - trueSaturationPoint);
-				double relativeDifference = absoluteDifference / ((double) datasetSize);
+				int trueSaturationPoint = (int) fittedCurve.getSaturationPoint(epsilon);
+				int extrapolatedSaturationPoint = (int) extrapolatedCurve.getSaturationPoint(epsilon);
+				int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
+				double relativeDifference = ((double) absoluteDifference) / ((double) datasetSize);
+
 				Map<String, Object> results = new HashMap<>();
 				results.put("truesaturationpoint", trueSaturationPoint);
 				results.put("extrapolatedsaturationpoint", extrapolatedSaturationPoint);
