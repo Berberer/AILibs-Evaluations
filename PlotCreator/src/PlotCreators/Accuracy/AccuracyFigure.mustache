@@ -1,0 +1,14 @@
+\begin{subfigure}[b]{5cm}
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=5cm,
+      scaled ticks=false, tick label style={/pgf/number format/fixed},
+      yticklabels={,,},
+      xticklabels={,,}
+    ]
+    {{#points}}
+    \addplot[mark=none, {{color}}] coordinates { {{#data}} ({{samplesize}},{{score}}) {{/data}} };
+    {{/points}}
+    \end{axis}
+  \end{tikzpicture}
+\end{subfigure}

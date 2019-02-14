@@ -5,14 +5,18 @@ let template;
 
 function init() {
   return new Promise((resolve, reject) => {
-    fs.readFile('Figure.mustache', 'utf8', (err, data) => {
-      if (err) {
-        reject();
-      } else {
-        template = data;
-        resolve();
+    fs.readFile(
+      'src/PlotCreators/Accuracy/AccuracyFigure.mustache',
+      'utf8',
+      (err, data) => {
+        if (err) {
+          reject();
+        } else {
+          template = data;
+          resolve();
+        }
       }
-    });
+    );
   });
 }
 
@@ -24,19 +28,7 @@ const datasetSizes = {
   cifar10: 60000
 };
 
-const colors = {
-  SimpleRandom: 'red',
-  Systematic: 'orange',
-  ClusterGMeans: 'brown',
-  ClusterKMeans: 'lightgray',
-  LLC: 'lime',
-  OSMAC: 'green',
-  GMeansStratified: 'pink',
-  ClassStratified: 'blue',
-  AttributeStratified: 'cyan'
-};
-
-function createPlot(dataset, model, data) {
+function createPlot(dataset, model, data, colors) {
   const points = [];
   for (let algorithm of data) {
     if (algorithm.data.length > 1) {
@@ -58,15 +50,6 @@ function createPlot(dataset, model, data) {
         });
       }
 
-      algorithmResults = algorithmResults.sort((a, b) => {
-        if (a.samplesize < b.samplesize) {
-          return -1;
-        }
-        if (a.samplesize > b.samplesize) {
-          return 1;
-        }
-        return 0;
-      });
       points.push({
         algorithm: algorithm.algorithm,
         color: colors[algorithm.algorithm],

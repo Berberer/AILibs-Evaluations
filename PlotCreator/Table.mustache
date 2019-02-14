@@ -1,7 +1,10 @@
 \setlength\tabcolsep{1pt}
-\begin{table*}[t]
+\newcolumntype{C}{>{\centering\arraybackslash} m{3.75cm} }
+\begin{figure*}[t]
   \centering
-  \begin{tabular}{l c c c c}
+  \label{fig:{{AccuracyResults}}}
+  \caption{ {{ caption }}(Algorithms: \textcolor{ {{colors.SimpleRandom}}}{Simple Random}, \textcolor{ {{colors.Systematic}}}{Systematic}, \textcolor{ {{colors.ClusterGMeans}}}{Cluster g-means}, \textcolor{ {{colors.ClusterKMeans}}}{Cluster k-means}, \textcolor{ {{colors.LCC}}}{LCC}, \textcolor{ {{colors.OSMAC}}}{OSMAC}, \textcolor{ {{colors.GMeansStratified}}}{g-means Stratified}, \textcolor{ {{colors.ClassStratified}}}{Class Stratified}, \textcolor{ {{colors.AttributeStratified}}}{Attribute Stratified})}
+  \begin{tabular}{m{1.5cm}CCCC}
     &har&eye\_movements&cifar10&amazon\\
     SVM& {{ SVM_har }}&
     {{ SVM_eye\_movements }}&
@@ -20,4 +23,4 @@
     {{ KNN5_cifar10 }}&
     {{ KNN5_amazon }}\\
   \end{tabular}
-\end{table*}
+\end{figure*}
