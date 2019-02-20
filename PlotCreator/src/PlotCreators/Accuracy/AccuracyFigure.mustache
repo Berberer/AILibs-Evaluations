@@ -4,7 +4,9 @@
       width=5cm,
       scaled ticks=false, tick label style={/pgf/number format/fixed},
       yticklabels={,,},
-      xticklabels={,,}
+      xticklabels={,,},
+      ymin=0,
+      ymax=1
     ]
     {{#points}}
     \addplot[mark=none, {{color}}] coordinates { {{#data}} ({{samplesize}},{{score}}) {{/data}} };
