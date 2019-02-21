@@ -41,7 +41,7 @@ public class SaturationPointTester {
 				+ "FROM subsampling_results_with_sample_sizes WHERE dataset = '" + dataset + "' AND " + "model = '"
 				+ model + "' AND algorithm = '" + algorithm + "' AND score IS NOT NULL "
 				+ "GROUP BY achievedSampleSize ORDER BY CAST(achievedSampleSize AS unsigned) ASC";
-		SQLAdapter adapter = new SQLAdapter("isys-db.cs.upb.de", "pgotfml", "automl2018", "pgotfml_subsampling", true);
+		SQLAdapter adapter = new SQLAdapter("isys-db.cs.upb.de", "<USER>", "<PASSWORD>", "pgotfml_subsampling", true);
 		ResultSet rs = adapter.getResultsOfQuery(query);
 		Map<Double, Double> points = new HashMap<Double, Double>();
 		WeightedObservedPoints weightedObservedPoints = new WeightedObservedPoints();
