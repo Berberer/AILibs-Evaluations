@@ -15,7 +15,7 @@ import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
-import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolator;
+import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolationMethod;
 import subsampling.ISubsamplingConfig;
 
 public class SaturationPointExperimenter {
@@ -75,7 +75,7 @@ public class SaturationPointExperimenter {
 				LearningCurve fittedCurve = CurveFitter.fitLearningCurve(weightedObservedPoints);
 
 				// Extrapolate saturation point
-				LearningCurveExtrapolationMethod extrapolationMethod = new InversePowerLawExtrapolator();
+				LearningCurveExtrapolationMethod extrapolationMethod = new InversePowerLawExtrapolationMethod();
 				int[] selectedAnchorpointsX = new int[] { 8, 16, 64, 128 };
 				double[] selectedAnchorpointsY = new double[] { points.get(8.0d), points.get(16.0d), points.get(64.0d),
 						points.get(128.0d) };
