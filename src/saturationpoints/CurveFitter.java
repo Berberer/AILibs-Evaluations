@@ -11,7 +11,7 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 
 import jaicore.ml.interfaces.LearningCurve;
-import jaicore.ml.learningcurve.extrapolation.InversePowerLaw.InversePowerLawLearningCurve;
+import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawLearningCurve;
 
 public class CurveFitter extends AbstractCurveFitter{
 

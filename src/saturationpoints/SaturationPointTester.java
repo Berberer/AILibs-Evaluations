@@ -9,7 +9,7 @@ import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import jaicore.basic.SQLAdapter;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
-import jaicore.ml.learningcurve.extrapolation.InversePowerLaw.InversePowerLawExtrapolator;
+import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolator;
 
 public class SaturationPointTester {
 

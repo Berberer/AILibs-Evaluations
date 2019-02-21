@@ -15,7 +15,7 @@ import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
-import jaicore.ml.learningcurve.extrapolation.InversePowerLaw.InversePowerLawExtrapolator;
+import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolator;
 import subsampling.ISubsamplingConfig;
 
 public class SaturationPointExperimenter {
