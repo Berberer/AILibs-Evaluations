@@ -1,0 +1,22 @@
+\begin{subfigure}[b]{5cm}
+  \begin{tikzpicture}
+    \begin{axis}[
+      xbar,
+      width=5cm,
+      y=-0.5cm,
+      xmin=0,
+      xmax=0.75,
+      bar width=0.3cm,
+      enlarge y limits={abs=0.45cm},
+      symbolic y coords={SimpleRandom,Systematic,ClusterGMeans,ClusterKMeans,LCC,OSMAC,GMeansStratified,AttributeStratified,ClassStratified},
+      ytick=data,
+      ticks=none,
+    ]
+    {{#points}}
+    \addplot[fill={{color}}] table[col sep=comma,header=false] {
+      {{relativedifference}},{{algorithm}}
+    };
+    {{/points}}
+  \end{axis}
+  \end{tikzpicture}
+\end{subfigure}

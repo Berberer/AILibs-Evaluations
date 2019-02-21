@@ -1,5 +1,6 @@
 package saturationpoints;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,12 +71,12 @@ public class SaturationPointTester {
 		int trueSaturationPoint = (int) fittedCurve.getSaturationPoint(epsilon);
 		int extrapolatedSaturationPoint = (int) extrapolatedCurve.getSaturationPoint(epsilon);
 		int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
-		double relativeDifference = ((double) absoluteDifference) / ((double) datasetSize);
+		BigDecimal relativeDifference = new BigDecimal(((double) absoluteDifference) / ((double) datasetSize));
 
 		System.out.println("TRUE SATURATION POINT: " + trueSaturationPoint);
 		System.out.println("EXTRAPOLATED SATURATION POINT: " + extrapolatedSaturationPoint);
 		System.out.println("ABSOLUTE DIFFERENCE: " + absoluteDifference);
-		System.out.println("RELATIVE DIFFERENCE: " + relativeDifference);
+		System.out.println("RELATIVE DIFFERENCE: " + relativeDifference.toPlainString());
 		adapter.close();
 	}
 }

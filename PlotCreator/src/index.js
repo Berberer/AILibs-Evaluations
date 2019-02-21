@@ -26,6 +26,15 @@ switch (process.argv[4]) {
     label = 'AccuracyResults';
     caption = 'Results for the accuracy measurements in \\textit{Experiment A}';
     break;
+  case 'saturationPoint':
+    plotCreator = require('./PlotCreators/SaturationPoint/SaturationPointPlotCreator.js');
+    queryFile = 'src/PlotCreators/SaturationPoint/SaturationPointQuery.sql';
+    label = 'SaturationPointResults';
+    caption =
+      'Difference, relative to the dataset size, between the extrapolated ' +
+      'saturation point and the saturation point of the measurements in ' +
+      '\\textit{Experiment B}';
+    break;
   default:
     if (process.argv[4]) {
       console.log(`Unknown plot type ${process.argv[4]}`);
@@ -92,7 +101,7 @@ plotCreator
           console.log('Table template read error');
           console.log(err);
         } else {
-          figures.lable = label;
+          figures.label = label;
           figures.caption = caption;
           figures.colors = colors;
           let table = Mustache.render(data, figures);
