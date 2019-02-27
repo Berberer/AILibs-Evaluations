@@ -64,7 +64,7 @@ public class SaturationPointTester {
 		double[] selectedAnchorpointsY = new double[] { points.get(8.0d), points.get(16.0d), points.get(64.0d),
 				points.get(128.0d) };
 		LearningCurve extrapolatedCurve = extrapolationMethod
-				.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY);
+				.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY, datasetSize);
 		System.out.println("EXTRAPOLATED CURVE: " + extrapolatedCurve);
 
 		// Print results
