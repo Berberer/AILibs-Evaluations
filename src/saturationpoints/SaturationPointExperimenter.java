@@ -14,6 +14,7 @@ import jaicore.experiments.ExperimentRunner;
 import jaicore.experiments.IExperimentIntermediateResultProcessor;
 import jaicore.experiments.IExperimentSetConfig;
 import jaicore.experiments.IExperimentSetEvaluator;
+import jaicore.ml.interfaces.AnalyticalLearningCurve;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
 import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolationMethod;
@@ -80,12 +81,13 @@ public class SaturationPointExperimenter {
 				int[] selectedAnchorpointsX = new int[] { 8, 16, 64, 128 };
 				double[] selectedAnchorpointsY = new double[] { points.get(8.0d), points.get(16.0d), points.get(64.0d),
 						points.get(128.0d) };
-				LearningCurve extrapolatedCurve = extrapolationMethod
-						.extrapolateLearningCurveFromAnchorPoints(selectedAnchorpointsX, selectedAnchorpointsY, datasetSize);
+				LearningCurve extrapolatedCurve = extrapolationMethod.extrapolateLearningCurveFromAnchorPoints(
+						selectedAnchorpointsX, selectedAnchorpointsY, datasetSize);
 
 				// Submit results
-				int trueSaturationPoint = (int) fittedCurve.getSaturationPoint(epsilon);
-				int extrapolatedSaturationPoint = (int) extrapolatedCurve.getSaturationPoint(epsilon);
+				int trueSaturationPoint = (int) ((AnalyticalLearningCurve) fittedCurve).getSaturationPoint(epsilon);
+				int extrapolatedSaturationPoint = (int) ((AnalyticalLearningCurve) extrapolatedCurve)
+						.getSaturationPoint(epsilon);
 				int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
 				BigDecimal relativeDifference = new BigDecimal(((double) absoluteDifference) / ((double) datasetSize));
 
