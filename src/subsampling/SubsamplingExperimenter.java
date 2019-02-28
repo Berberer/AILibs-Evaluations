@@ -197,6 +197,7 @@ public class SubsamplingExperimenter {
 				results.put("samplingTime", samplingTime);
 				results.put("trainingTime", trainingTime);
 				results.put("achievedSampleSize", subsampledDatasetTrain.size());
+				results.put("options", "default");
 				processor.processResults(results);
 			}
 		});
