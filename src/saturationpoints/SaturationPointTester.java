@@ -8,6 +8,7 @@ import java.util.Map;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
 
 import jaicore.basic.SQLAdapter;
+import jaicore.ml.interfaces.AnalyticalLearningCurve;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
 import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolationMethod;
@@ -68,8 +69,8 @@ public class SaturationPointTester {
 		System.out.println("EXTRAPOLATED CURVE: " + extrapolatedCurve);
 
 		// Print results
-		int trueSaturationPoint = (int) fittedCurve.getSaturationPoint(epsilon);
-		int extrapolatedSaturationPoint = (int) extrapolatedCurve.getSaturationPoint(epsilon);
+		int trueSaturationPoint = (int) ((AnalyticalLearningCurve)fittedCurve).getSaturationPoint(epsilon);
+		int extrapolatedSaturationPoint = (int) ((AnalyticalLearningCurve)extrapolatedCurve).getSaturationPoint(epsilon);
 		int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
 		BigDecimal relativeDifference = new BigDecimal(((double) absoluteDifference) / ((double) datasetSize));
 
