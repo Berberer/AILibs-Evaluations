@@ -3,4 +3,4 @@ db.ssl = true
 db.username = <USERNAME>
 db.password = <PASSWORD>
 db.database = <DB>
-db.table = subsampling_results
+db.table = <TABLE>
