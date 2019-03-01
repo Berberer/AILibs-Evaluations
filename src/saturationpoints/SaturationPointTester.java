@@ -69,8 +69,9 @@ public class SaturationPointTester {
 		System.out.println("EXTRAPOLATED CURVE: " + extrapolatedCurve);
 
 		// Print results
-		int trueSaturationPoint = (int) ((AnalyticalLearningCurve)fittedCurve).getSaturationPoint(epsilon);
-		int extrapolatedSaturationPoint = (int) ((AnalyticalLearningCurve)extrapolatedCurve).getSaturationPoint(epsilon);
+		int trueSaturationPoint = (int) ((AnalyticalLearningCurve) fittedCurve).getSaturationPoint(epsilon);
+		int extrapolatedSaturationPoint = (int) ((AnalyticalLearningCurve) extrapolatedCurve)
+				.getSaturationPoint(epsilon);
 		int absoluteDifference = Math.abs(trueSaturationPoint - extrapolatedSaturationPoint);
 		BigDecimal relativeDifference = new BigDecimal(((double) absoluteDifference) / ((double) datasetSize));
 
