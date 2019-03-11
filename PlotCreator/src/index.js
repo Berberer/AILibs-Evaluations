@@ -1,6 +1,5 @@
 const Mustache = require('mustache');
 const fs = require('fs');
-const resultsFetcher = require('./ResultFetcher.js');
 
 const colors = {
   SimpleRandom: 'red',
@@ -15,25 +14,29 @@ const colors = {
 };
 
 let plotCreator;
-let queryFile;
 let label;
 let caption;
+let figureColors;
 
 switch (process.argv[4]) {
   case 'accuracy':
     plotCreator = require('./PlotCreators/Accuracy/AccuracyPlotCreator.js');
-    queryFile = 'src/PlotCreators/Accuracy/AccuracyQuery.sql';
     label = 'AccuracyResults';
     caption = 'Results for the accuracy measurements in \\textit{Experiment A}';
+    figureColors = colors;
     break;
   case 'saturationPoint':
     plotCreator = require('./PlotCreators/SaturationPoint/SaturationPointPlotCreator.js');
-    queryFile = 'src/PlotCreators/SaturationPoint/SaturationPointQuery.sql';
+    // 'src/PlotCreators/SaturationPoint/SaturationPointQuery.sql'
     label = 'SaturationPointResults';
     caption =
-      'Difference, relative to the dataset size, between the extrapolated ' +
-      'saturation point and the saturation point of the measurements in ' +
-      '\\textit{Experiment B}';
+      'Overview of some learning curve extrapolation results using Class stratified sampling as an example. Displayed are: ' +
+      'Anchor-Points for extrapolation(black crosses), ' +
+      '\\textcolor{blue}{observed learning curve}, ' +
+      'extrapolated learning curve, ' +
+      '\\textcolor{lime}{extrapolated saturation point} ' +
+      'and, if one was measurable, the \\textcolor{green}{observed saturation point}.';
+    figureColors = false;
     break;
   default:
     if (process.argv[4]) {
@@ -43,18 +46,6 @@ switch (process.argv[4]) {
     }
     process.exit();
 }
-
-const algorithms = [
-  'SimpleRandom',
-  'Systematic',
-  'ClusterGMeans',
-  'ClusterKMeans',
-  'LCC',
-  'OSMAC',
-  'GMeansStratified',
-  'AttributeStratified',
-  'ClassStratified'
-];
 
 const models = ['SVM', 'DecisionTree', 'KNN1', 'KNN5'];
 
@@ -66,51 +57,42 @@ plotCreator
     const plotPromises = [];
     for (let dataset of datasets) {
       for (let model of models) {
-        const promises = algorithms.map(algorithm => {
-          return resultsFetcher.fetchResult(
-            { user: process.argv[2], password: process.argv[3] },
-            {
-              queryFile,
-              algorithm,
-              model,
-              dataset
-            }
-          );
-        });
-
         plotPromises.push(
-          new Promise((resolve, reject) => {
-            Promise.all(promises)
-              .then(data => {
-                resolve(plotCreator.createPlot(dataset, model, data, colors));
-              })
-              .catch(err => {
-                reject(err);
-              });
-          })
+          plotCreator.createPlot(
+            { user: process.argv[2], password: process.argv[3] },
+            model,
+            dataset,
+            colors
+          )
         );
       }
     }
-    Promise.all(plotPromises).then(plots => {
-      const figures = {};
-      for (let plot of plots) {
-        figures[`${plot.model}_${plot.dataset}`] = plot.figure;
-      }
-      fs.readFile('Table.mustache', 'utf8', (err, data) => {
-        if (err) {
-          console.log('Table template read error');
-          console.log(err);
-        } else {
-          figures.label = label;
-          figures.caption = caption;
-          figures.colors = colors;
-          let table = Mustache.render(data, figures);
-          table = table.replace(/&#x3D;/g, '=');
-          table = table.replace(/&#x2F;/g, '/');
-          console.log(table);
+
+    Promise.all(plotPromises)
+      .then(plots => {
+        const figures = {};
+        for (let plot of plots) {
+          figures[`${plot.model}_${plot.dataset}`] = plot.figure;
         }
+        fs.readFile('Table.mustache', 'utf8', (err, data) => {
+          if (err) {
+            console.log('Table template read error');
+            console.log(err);
+          } else {
+            figures.label = label;
+            figures.caption = caption;
+            figures.colors = figureColors;
+            let table = Mustache.render(data, figures);
+            table = table.replace(/&#x3D;/g, '=');
+            table = table.replace(/&#x2F;/g, '/');
+            console.log(table);
+          }
+        });
+      })
+      .catch(error => {
+        console.log('Plotting error');
+        console.log(error);
       });
-    });
   })
   .catch(err => {
     console.log('Mustache init error');

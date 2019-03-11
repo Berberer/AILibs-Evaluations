@@ -18,6 +18,7 @@ import jaicore.ml.interfaces.AnalyticalLearningCurve;
 import jaicore.ml.interfaces.LearningCurve;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
 import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolationMethod;
+import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawLearningCurve;
 import subsampling.ISubsamplingConfig;
 
 public class SaturationPointExperimenter {
@@ -96,6 +97,12 @@ public class SaturationPointExperimenter {
 				results.put("extrapolatedsaturationpoint", extrapolatedSaturationPoint);
 				results.put("absolutedifference", absoluteDifference);
 				results.put("relativedifference", relativeDifference.toPlainString());
+				results.put("at", ((InversePowerLawLearningCurve)fittedCurve).getA());
+				results.put("ae", ((InversePowerLawLearningCurve)extrapolatedCurve).getA());
+				results.put("bt", ((InversePowerLawLearningCurve)fittedCurve).getB());
+				results.put("be", ((InversePowerLawLearningCurve)extrapolatedCurve).getB());
+				results.put("ct", ((InversePowerLawLearningCurve)fittedCurve).getC());
+				results.put("ce", ((InversePowerLawLearningCurve)extrapolatedCurve).getC());
 				processor.processResults(results);
 			}
 		});

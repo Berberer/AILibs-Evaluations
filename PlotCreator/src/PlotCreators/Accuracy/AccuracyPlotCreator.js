@@ -1,24 +1,20 @@
 const Mustache = require('mustache');
 const fs = require('fs');
+const resultsFetcher = require('../../ResultFetcher.js');
 
 let template;
 
-function init() {
-  return new Promise((resolve, reject) => {
-    fs.readFile(
-      'src/PlotCreators/Accuracy/AccuracyFigure.mustache',
-      'utf8',
-      (err, data) => {
-        if (err) {
-          reject();
-        } else {
-          template = data;
-          resolve();
-        }
-      }
-    );
-  });
-}
+const algorithms = [
+  'SimpleRandom',
+  'Systematic',
+  'ClusterGMeans',
+  'ClusterKMeans',
+  'LCC',
+  'OSMAC',
+  'GMeansStratified',
+  'AttributeStratified',
+  'ClassStratified'
+];
 
 /* eslint camelcase: ["error", {allow: ["eye_movements"]}] */
 const datasetSizes = {
@@ -28,7 +24,55 @@ const datasetSizes = {
   cifar10: 60000
 };
 
-function createPlot(dataset, model, data, colors) {
+function init() {
+  return new Promise((resolve, reject) => {
+    fs.readFile(
+      'src/PlotCreators/Accuracy/AccuracyFigure.mustache',
+      'utf8',
+      (err1, templateData) => {
+        if (err1) {
+          reject(err1);
+        } else {
+          template = templateData;
+          resolve();
+        }
+      }
+    );
+  });
+}
+
+function createPlot(login, model, dataset, colors) {
+  return new Promise((resolve, reject) => {
+    const dbRequests = [];
+    for (let algorithm of algorithms) {
+      dbRequests.push(
+        resultsFetcher.fetchResult(login, {
+          queryFile: 'src/PlotCreators/Accuracy/AccuracyQuery.sql',
+          algorithm,
+          model,
+          dataset
+        })
+      );
+    }
+    Promise.all(dbRequests)
+      .then(results => {
+        let d = dataset;
+        if (dataset === 'eye_movements') {
+          d = 'eye\\_movements';
+        }
+        resolve({
+          model,
+          dataset: d,
+          figure: createFigure(results, model, dataset, colors)
+        });
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+}
+
+function createFigure(data, model, dataset, colors) {
   const points = [];
   for (let algorithm of data) {
     if (algorithm.data.length > 1) {
@@ -45,7 +89,7 @@ function createPlot(dataset, model, data, colors) {
           samplesize = Number(row.samplesize);
         }
         algorithmResults.push({
-          samplesize,
+          samplesize: samplesize / datasetSizes[dataset],
           score
         });
       }
@@ -57,17 +101,9 @@ function createPlot(dataset, model, data, colors) {
       });
     }
   }
-  if (dataset === 'eye_movements') {
-    dataset = 'eye\\_movements';
-  }
-  return {
-    dataset,
-    model,
-    figure: Mustache.render(template, {
-      title: `${model} on ${dataset}`,
-      points
-    })
-  };
+  return Mustache.render(template, {
+    points
+  });
 }
 
 module.exports = {
