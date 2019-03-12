@@ -19,7 +19,7 @@ function init() {
       'utf8',
       (err, data) => {
         if (err) {
-          reject();
+          reject(err);
         } else {
           template = data;
           resolve();

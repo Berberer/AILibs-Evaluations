@@ -16,24 +16,16 @@ const algorithms = [
   'ClassStratified'
 ];
 
-/* eslint camelcase: ["error", {allow: ["eye_movements"]}] */
-const datasetSizes = {
-  har: 10299,
-  eye_movements: 10936,
-  amazon: 1500,
-  cifar10: 60000
-};
-
 function init() {
   return new Promise((resolve, reject) => {
     fs.readFile(
-      'src/PlotCreators/Accuracy/AccuracyFigure.mustache',
+      'src/PlotCreators/ExtrapolationTable/ExtrapolationTable.mustache',
       'utf8',
-      (err, templateData) => {
+      (err, data) => {
         if (err) {
           reject(err);
         } else {
-          template = templateData;
+          template = data;
           resolve();
         }
       }
@@ -47,7 +39,7 @@ function createPlot(login, model, dataset, colors) {
     for (let algorithm of algorithms) {
       dbRequests.push(
         resultsFetcher.fetchResult(login, {
-          queryFile: 'src/PlotCreators/Accuracy/AccuracyQuery.sql',
+          queryFile: 'src/PlotCreators/ExtrapolationTable/ExtrapolationQuery.sql',
           algorithm,
           model,
           dataset
@@ -63,7 +55,7 @@ function createPlot(login, model, dataset, colors) {
         resolve({
           model,
           dataset: d,
-          figure: createFigure(results, model, dataset, colors)
+          figure: createTable(results, colors)
         });
       })
       .catch(err => {
@@ -72,32 +64,17 @@ function createPlot(login, model, dataset, colors) {
   });
 }
 
-function createFigure(data, model, dataset, colors) {
+function createTable(data, colors) {
   const points = [];
   for (let algorithm of data) {
-    if (algorithm.data.length > 1) {
-      let algorithmResults = [];
-      for (let row of algorithm.data) {
-        const score = row.score;
-        let samplesize;
-        if (row.samplesize === '100p') {
-          samplesize = datasetSizes[dataset];
-        } else if (row.samplesize.includes('p')) {
-          samplesize = row.samplesize.replace(/p/g, '');
-          samplesize = Math.floor(datasetSizes[dataset] * Number('0.' + samplesize));
-        } else {
-          samplesize = Number(row.samplesize);
-        }
-        algorithmResults.push({
-          samplesize: samplesize / datasetSizes[dataset],
-          score
-        });
-      }
-
+    if (algorithm.data.length === 1 && Number(algorithm.data[0].relativedifference) < 1) {
       points.push({
         algorithm: algorithm.algorithm,
         color: colors[algorithm.algorithm],
-        data: algorithmResults
+        extrapolatedPoint: algorithm.data[0].extrapolatedsaturationpoint,
+        truePoint: algorithm.data[0].truesaturationpoint,
+        absoluteDiff: algorithm.data[0].absolutedifference,
+        relativeDiff: Number(algorithm.data[0].relativedifference).toFixed(3)
       });
     }
   }

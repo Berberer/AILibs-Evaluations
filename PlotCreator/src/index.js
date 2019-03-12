@@ -22,7 +22,7 @@ switch (process.argv[4]) {
   case 'accuracy':
     plotCreator = require('./PlotCreators/Accuracy/AccuracyPlotCreator.js');
     label = 'AccuracyResults';
-    caption = 'Results for the accuracy measurements in \\textit{Experiment A}';
+    caption = 'Results for the accuracy measurements in \\textit{Experiment A} ';
     figureColors = colors;
     break;
   case 'saturationPoint':
@@ -30,13 +30,24 @@ switch (process.argv[4]) {
     // 'src/PlotCreators/SaturationPoint/SaturationPointQuery.sql'
     label = 'SaturationPointResults';
     caption =
-      'Overview of some learning curve extrapolation results using Class stratified sampling as an example. Displayed are: ' +
+      'Overview of some learning curve extrapolation results of \\textit{Experiment B} using Class stratified sampling as an example. Displayed are: ' +
       'Anchor-Points for extrapolation(black crosses), ' +
       '\\textcolor{blue}{observed learning curve}, ' +
       'extrapolated learning curve, ' +
       '\\textcolor{lime}{extrapolated saturation point} ' +
       'and, if one was measurable, the \\textcolor{green}{observed saturation point}.';
     figureColors = false;
+    break;
+  case 'extrapolation':
+    plotCreator = require('./PlotCreators/ExtrapolationTable/ExtrapolationTableCreator.js');
+    label = 'ExtrapolationTable';
+    caption =
+      'Tabluar comparison of the saturation point extrapolations for anchor points sampled with the different subsampling algorithms in \\textit{Experiment B}. ' +
+      'Showed are the Observed saturation point $S^*$, ' +
+      'the extrapolated saturation point $\\widehat{S^*}$, ' +
+      'the difference of the two in relation to  the dataset size $\\frac{|S^* - \\widehat{S^*}|}{|D|}$ ' +
+      ' and the absolute difference $|S^* - \\widehat{S^*}|$ ';
+    figureColors = colors;
     break;
   default:
     if (process.argv[4]) {
@@ -85,6 +96,7 @@ plotCreator
             let table = Mustache.render(data, figures);
             table = table.replace(/&#x3D;/g, '=');
             table = table.replace(/&#x2F;/g, '/');
+            table = table.replace(/&amp;/g, '&');
             console.log(table);
           }
         });
