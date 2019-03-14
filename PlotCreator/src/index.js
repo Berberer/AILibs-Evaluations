@@ -46,7 +46,15 @@ switch (process.argv[4]) {
       'Showed are the Observed saturation point $S^*$, ' +
       'the extrapolated saturation point $\\widehat{S^*}$, ' +
       'the difference of the two in relation to  the dataset size $\\frac{|S^* - \\widehat{S^*}|}{|D|}$ ' +
-      ' and the absolute difference $|S^* - \\widehat{S^*}|$ ';
+      'and the absolute difference $|S^* - \\widehat{S^*}|$. ' +
+      'For the missing columns it was not possible to extract anchorpoints with a suitale size ' +
+      'or no true saturation point could extrapolated from the observations ';
+    figureColors = colors;
+    break;
+  case 'timeSavings':
+    plotCreator = require('./PlotCreators/TimeSavings/TimeSavingsPlotCreator.js');
+    label = 'TimeSavingsResults';
+    caption = 'TODO';
     figureColors = colors;
     break;
   default:
@@ -97,6 +105,7 @@ plotCreator
             table = table.replace(/&#x3D;/g, '=');
             table = table.replace(/&#x2F;/g, '/');
             table = table.replace(/&amp;/g, '&');
+            table = table.replace(/&#123;/g, '{');
             console.log(table);
           }
         });

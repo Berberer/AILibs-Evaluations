@@ -1,0 +1,36 @@
+\begin{subfigure}[b]{5cm}
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=5cm,
+      ybar stacked, ymin=0,
+      symbolic x coords={
+        SimpleRandom,
+        Systematic,
+        LCC,
+        OSMAC,
+        GMeansStratified,
+        AttributeStratified,
+        ClassStratified,
+        Full
+      },
+      xtick=data,
+      xticklabels={,,},
+      scaled y ticks = false,
+      yticklabels={,,},
+    ]
+    {{#samplingTimes}}
+    \addplot [fill={{color}},draw=none] coordinates {
+      {{#times}}
+      (&#123;{{algorithm}}}, {{time}})
+      {{/times}}
+    };
+    {{/samplingTimes}}
+    \addplot [fill=violet,draw=none] coordinates {
+      {{#trainingTimes}}
+      (&#123;{{algorithm}}}, {{time}})
+      {{/trainingTimes}}
+      ({Full}, {{fullTrainingTime}})
+    };
+    \end{axis}
+  \end{tikzpicture}
+\end{subfigure}

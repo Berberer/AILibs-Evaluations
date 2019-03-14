@@ -11,6 +11,7 @@ function fetchResult(login, queryData) {
         query = query.replace(/ALGORITHM/g, queryData.algorithm);
         query = query.replace(/MODEL/g, queryData.model);
         query = query.replace(/DATASET/g, queryData.dataset);
+        query = query.replace(/VALUE/g, queryData.value);
 
         const connection = mysql.createConnection({
           host: 'isys-db.cs.upb.de',
