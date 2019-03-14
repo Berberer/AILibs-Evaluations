@@ -27,7 +27,6 @@ switch (process.argv[4]) {
     break;
   case 'saturationPoint':
     plotCreator = require('./PlotCreators/SaturationPoint/SaturationPointPlotCreator.js');
-    // 'src/PlotCreators/SaturationPoint/SaturationPointQuery.sql'
     label = 'SaturationPointResults';
     caption =
       'Overview of some learning curve extrapolation results of \\textit{Experiment B} using Class stratified sampling as an example. Displayed are: ' +
@@ -54,7 +53,10 @@ switch (process.argv[4]) {
   case 'timeSavings':
     plotCreator = require('./PlotCreators/TimeSavings/TimeSavingsPlotCreator.js');
     label = 'TimeSavingsResults';
-    caption = 'TODO';
+    caption =
+      'Illustration of the possible time savings  by training the different \textcolor{violet}{times for training} with and without the different subsampling methods. ' +
+      'The last bar on the right is the time for training on the whole dataset without subsampling. ' +
+      'The bars before are the times for subsampling with one of the subsampling methods plus the time for training with the subsample ';
     figureColors = colors;
     break;
   default:
