@@ -3,7 +3,6 @@ package extrapolation;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +23,7 @@ import jaicore.ml.WekaUtil;
 import jaicore.ml.core.dataset.IInstance;
 import jaicore.ml.core.dataset.sampling.inmemory.ASamplingAlgorithm;
 import jaicore.ml.core.dataset.sampling.inmemory.factories.GmeansSamplingFactory;
+import jaicore.ml.core.dataset.sampling.inmemory.factories.KmeansSamplingFactory;
 import jaicore.ml.core.dataset.sampling.inmemory.factories.LocalCaseControlSamplingFactory;
 import jaicore.ml.core.dataset.sampling.inmemory.factories.OSMACSamplingFactory;
 import jaicore.ml.core.dataset.sampling.inmemory.factories.SimpleRandomSamplingFactory;
@@ -31,15 +31,13 @@ import jaicore.ml.core.dataset.sampling.inmemory.factories.StratifiedSamplingFac
 import jaicore.ml.core.dataset.sampling.inmemory.factories.SystematicSamplingFactory;
 import jaicore.ml.core.dataset.sampling.inmemory.factories.interfaces.ISamplingAlgorithmFactory;
 import jaicore.ml.core.dataset.sampling.inmemory.stratified.sampling.AttributeBasedStratiAmountSelectorAndAssigner;
-import jaicore.ml.core.dataset.sampling.inmemory.stratified.sampling.DiscretizationHelper.DiscretizationStrategy;
 import jaicore.ml.learningcurve.extrapolation.LearningCurveExtrapolationMethod;
-import jaicore.ml.learningcurve.extrapolation.ipl.InversePowerLawExtrapolationMethod;
 import jaicore.ml.learningcurve.extrapolation.lc.LinearCombinationExtrapolationMethod;
 import weka.classifiers.Classifier;
 import weka.classifiers.evaluation.Evaluation;
 import weka.core.Instances;
 
-public class ExtrapolationExperimenter {
+public class LCExtrapolationExperimenter {
 
 	private static final double[] ANCHORPOINTS_FEW = { 0.001, 0.005, 0.01, 0.02, 0.04 };
 
@@ -48,12 +46,14 @@ public class ExtrapolationExperimenter {
 	private static final double[] ANCHORPOINTS_MANY = { 0.001, 0.005, 0.01, 0.02, 0.04, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3,
 			0.4, 0.5 };
 
+	private static final int[] ANCHORPOINTS_ABSOLUTE = { 8, 16, 64, 128 };
+
 	private static final String EVALUATION_METHOD_SATURATION_POINT = "extrapolated_saturation_point";
 
 	private static final String EVALUATION_METHOD_LEARNING_CURVE = "learning_curve_extrapolation";
 
 	public static void main(String[] args) {
-		IExtrapolationConfig config = ConfigCache.getOrCreate(IExtrapolationConfig.class);
+		LCExtrapolationConfig config = ConfigCache.getOrCreate(LCExtrapolationConfig.class);
 
 		ExperimentRunner runner = new ExperimentRunner(new IExperimentSetEvaluator() {
 
@@ -70,7 +70,6 @@ public class ExtrapolationExperimenter {
 				Map<String, String> description = experimentEntry.getExperiment().getValuesOfKeyFields();
 				String dataset = description.get("dataset");
 				String subsamplingAlgorithm = description.get("subsampling_algorithm");
-				String extrapolationAlgorithm = description.get("extrapolation_algorithm");
 				String evaluationMethod = description.get("evaluation_method");
 				String anchorPoint = description.get("anchorpoint");
 				int timeout = Integer.valueOf(description.get("timeout"));
@@ -102,60 +101,60 @@ public class ExtrapolationExperimenter {
 				case "OSMAC":
 					subsamplingAlgorithmFactory = new OSMACSamplingFactory<>();
 					break;
-				case "GMeansStratified":
+				case "ClusterGMeans":
 					subsamplingAlgorithmFactory = new GmeansSamplingFactory<>();
 					break;
-				case "AttributeStratified":
-					List<Integer> attributeIndices = new ArrayList<>();
-					attributeIndices.add(data.classIndex());
-
-					AttributeBasedStratiAmountSelectorAndAssigner<IInstance> selectorAndAssigner = new AttributeBasedStratiAmountSelectorAndAssigner<>(
-							attributeIndices, DiscretizationStrategy.EQUAL_SIZE, 10);
-
-					subsamplingAlgorithmFactory = new StratifiedSamplingFactory<>(selectorAndAssigner,
-							selectorAndAssigner);
+				case "ClusterKMeans":
+					subsamplingAlgorithmFactory = new KmeansSamplingFactory<>();
+					break;
+				case "ClassStratified":
+					AttributeBasedStratiAmountSelectorAndAssigner<IInstance> aClass = new AttributeBasedStratiAmountSelectorAndAssigner<>();
+					subsamplingAlgorithmFactory = new StratifiedSamplingFactory<>(aClass, aClass);
 					break;
 				default:
 					throw new RuntimeException(String.format("Invalid subsampling algorith %s", subsamplingAlgorithm));
 				}
 
-				LearningCurveExtrapolationMethod extrapolationMethod;
+				LearningCurveExtrapolationMethod extrapolationMethod = new LinearCombinationExtrapolationMethod(
+						config.getSerivceHost(), config.getSerivcePort());
 
-				switch (extrapolationAlgorithm) {
-				case "lc":
-					extrapolationMethod = new LinearCombinationExtrapolationMethod(config.getLcSerivceHost(),
-							config.getLcSerivcePort());
-					break;
-				case "ipl":
-					extrapolationMethod = new InversePowerLawExtrapolationMethod(config.getIplSerivceHost(),
-							config.getIplSerivcePort());
-					break;
-				default:
-					throw new RuntimeException(
-							String.format("Invalid extrapolation algorith %s", extrapolationAlgorithm));
-				}
-
-				int[] anchorpoints;
+				int[] absoluteAnchorpoints = null;
+				double[] relativeAnchorpoints = null;
 				switch (anchorPoint) {
 				case "few":
-					anchorpoints = generateDatasetDependentAnchorpoints(data.size(), ANCHORPOINTS_FEW);
+					relativeAnchorpoints = ANCHORPOINTS_FEW;
 					break;
 				case "standard":
-					anchorpoints = generateDatasetDependentAnchorpoints(data.size(), ANCHORPOINTS_STANDARD);
+					relativeAnchorpoints = ANCHORPOINTS_STANDARD;
 					break;
 				case "many":
-					anchorpoints = generateDatasetDependentAnchorpoints(data.size(), ANCHORPOINTS_MANY);
+					relativeAnchorpoints = ANCHORPOINTS_MANY;
+					break;
+				case "absolute":
+					absoluteAnchorpoints = ANCHORPOINTS_ABSOLUTE;
 					break;
 				default:
 					throw new RuntimeException(String.format("Invalid anchorpoints parameter %s", anchorPoint));
 				}
 
 				if (evaluationMethod.equals(EVALUATION_METHOD_LEARNING_CURVE)) {
-					builder.withLearningCurveExtrapolationEvaluation(anchorpoints, subsamplingAlgorithmFactory, 0.7,
-							extrapolationMethod);
+					if (relativeAnchorpoints != null) {
+						builder.withLearningCurveExtrapolationEvaluationRelativeAnchorpoints(relativeAnchorpoints,
+								subsamplingAlgorithmFactory, 0.7, extrapolationMethod);
+					} else {
+						builder.withLearningCurveExtrapolationEvaluation(absoluteAnchorpoints,
+								subsamplingAlgorithmFactory, 0.7, extrapolationMethod);
+					}
+
 				} else if (evaluationMethod.equals(EVALUATION_METHOD_SATURATION_POINT)) {
-					builder.withExtrapolatedSaturationPointEvaluation(anchorpoints, subsamplingAlgorithmFactory, 0.7,
-							extrapolationMethod);
+					if (relativeAnchorpoints != null) {
+						builder.withExtrapolatedSaturationPointEvaluationRelativeAnchorpoints(relativeAnchorpoints,
+								subsamplingAlgorithmFactory, 0.7, extrapolationMethod);
+					} else {
+						builder.withExtrapolatedSaturationPointEvaluation(absoluteAnchorpoints,
+								subsamplingAlgorithmFactory, 0.7, extrapolationMethod);
+					}
+
 				}
 				MLPlan mlplan = new MLPlan(builder, splits.get(0));
 				mlplan.setPortionOfDataForPhase2(0.3f);
@@ -170,22 +169,12 @@ public class ExtrapolationExperimenter {
 				Map<String, Object> results = new HashMap<>();
 
 				double accuracy = eval.pctCorrect();
-				int numberOfSolution = mlplan.getNumberOfSolutions();
 
 				results.put("accuracy", accuracy);
-				results.put("solution_count", numberOfSolution);
 				processor.processResults(results);
 			}
 		});
 		runner.randomlyConductExperiments(true);
-	}
-
-	private static int[] generateDatasetDependentAnchorpoints(int datasetSize, double[] relativeSizes) {
-		int[] toReturn = new int[relativeSizes.length];
-		for (int i = 0; i < relativeSizes.length; i++) {
-			toReturn[i] = (int) (relativeSizes[i] * datasetSize);
-		}
-		return toReturn;
 	}
 
 }
