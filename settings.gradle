@@ -1,3 +1,3 @@
 includeBuild "../AILibs"
 
-rootProject.name = 'evaluations'
+rootProject.name = 'AILibs-Evaluations'
